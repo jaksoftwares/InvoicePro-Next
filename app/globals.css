@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
-/* ===== RESET ONLY (no opinions) ===== */
+/* =========================
+   Modern Neutral Reset
+   ========================= */
 
 *,
 *::before,
@@ -12,16 +14,21 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
-/* Remove browser default font & colors */
+:root {
+  color-scheme: srgb;
+}
+
 body {
-  font-family: inherit;
   background: transparent;
   color: inherit;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
-/* Inputs inherit styles instead of forcing them */
+/* Form elements */
 input,
 textarea,
 select,
@@ -33,19 +40,33 @@ button {
   outline: none;
 }
 
-/* Restore basic usability */
 input,
 textarea,
 select {
   border-radius: 0;
 }
 
-/* Placeholder inherits color unless styled via Tailwind */
 ::placeholder {
   opacity: 1;
 }
 
-/* Ensure print colors are preserved */
+/* Media */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* Print / PDF */
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
@@ -54,16 +75,13 @@ select {
   }
 }
 
-/* Force preserve colors in html2canvas captures */
 html[data-html2canvas-ignore="false"] {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
   color-adjust: exact;
 }
 
-/* Disable lab() color function before PDF export */
 @supports (color: lab(0 0 0)) {
-  /* Fallback: ensure colors render without lab() */
   :root {
     color-space: srgb;
   }

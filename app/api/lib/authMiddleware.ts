@@ -1,23 +1,25 @@
-// api/lib/authMiddleware.ts
+// app/api/lib/authMiddleware.ts
 // Helper to extract and verify Supabase JWT from Authorization header
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from './supabaseAdmin.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from './supabaseAdmin';
 
-export interface AuthenticatedRequest extends VercelRequest {
-  userId?: string;
+// Extended request with user info
+export interface AuthenticatedRequest {
+  userId: string;
   userEmail?: string;
 }
 
 export const withAuth = (
-  // Vercel handlers frequently `return res.status(...).json(...)`.
-  // That return type is `VercelResponse`, not `void`, so allow any return value.
-  handler: (req: AuthenticatedRequest, res: VercelResponse) => unknown | Promise<unknown>
+  handler: (req: NextRequest, userId: string) => Promise<NextResponse>
 ) => {
-  return async (req: AuthenticatedRequest, res: VercelResponse) => {
-    const authHeader = req.headers.authorization;
+  return async (req: NextRequest): Promise<NextResponse> => {
+    const authHeader = req.headers.get('authorization');
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing or invalid authorization header' });
+      return NextResponse.json(
+        { error: 'Missing or invalid authorization header' },
+        { status: 401 }
+      );
     }
 
     const token = authHeader.split(' ')[1];
@@ -27,17 +29,42 @@ export const withAuth = (
       const { data, error } = await supabaseAdmin.auth.getUser(token);
 
       if (error || !data.user) {
-        return res.status(401).json({ error: 'Invalid or expired token' });
+        return NextResponse.json(
+          { error: 'Invalid or expired token' },
+          { status: 401 }
+        );
       }
 
-      // Attach user info to request
-      req.userId = data.user.id;
-      req.userEmail = data.user.email;
-
-      return handler(req, res);
+      return handler(req, data.user.id);
     } catch (err) {
       console.error('Auth error:', err);
-      return res.status(401).json({ error: 'Authentication failed' });
+      return NextResponse.json(
+        { error: 'Authentication failed' },
+        { status: 401 }
+      );
     }
   };
 };
+
+// For routes that need the authenticated user ID extracted
+export async function getAuthenticatedUserId(req: NextRequest): Promise<string | null> {
+  const authHeader = req.headers.get('authorization');
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !data.user) {
+      return null;
+    }
+
+    return data.user.id;
+  } catch {
+    return null;
+  }
+}

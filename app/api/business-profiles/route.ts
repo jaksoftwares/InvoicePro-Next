@@ -131,17 +131,28 @@ async function createProfile(userId: string, body: Record<string, unknown>) {
   );
 }
 
+async function handleRequest(req: NextRequest, userId: string) {
+  if (req.method === 'GET') {
+    return listProfiles(userId);
+  }
+
+  if (req.method === 'POST') {
+    const body = await req.json().catch(() => ({}));
+    return createProfile(userId, body);
+  }
+
+  return NextResponse.json(
+    { error: 'Method not allowed' },
+    { status: 405 }
+  );
+}
+
 async function GET(request: NextRequest) {
-  return withAuth(async (userId: string) => {
-    return await listProfiles(userId);
-  })(request);
+  return withAuth((req, userId) => handleRequest(req, userId))(request);
 }
 
 async function POST(request: NextRequest) {
-  return withAuth(async (userId: string) => {
-    const body = await request.json().catch(() => ({}));
-    return await createProfile(userId, body);
-  })(request);
+  return withAuth((req, userId) => handleRequest(req, userId))(request);
 }
 
 export { GET, POST };

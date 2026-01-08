@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import remoteStorageUtils from '../utils/remoteStorage';
 
 interface AuthContextType {
   user: User | null;
@@ -20,12 +21,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Sync local data to remote after login
+  const syncDataToRemote = async () => {
+    try {
+      console.log('Syncing local data to Supabase...');
+      await remoteStorageUtils.syncLocalToRemote();
+      console.log('Data sync completed');
+    } catch (error) {
+      console.warn('Failed to sync data:', error);
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      // Sync data if user is logged in
+      if (session?.user) {
+        syncDataToRemote();
+      }
     });
 
     // Listen for auth changes
@@ -34,6 +50,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        // Sync data if user just logged in
+        if (session?.user) {
+          syncDataToRemote();
+        }
       }
     );
 
@@ -51,6 +71,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    // Reset sync flags on logout so data can be re-synced on next login
+    remoteStorageUtils.resetSyncFlags();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

@@ -1,8 +1,10 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import { Invoice } from '../../types';
 import { storageUtils } from '../../utils/storage';
+import { getAccessToken } from '../../lib/supabase';
 import InvoiceTemplate from './InvoiceTemplates';
 import { Download, ArrowLeft } from 'lucide-react';
 import { generateInvoicePDF } from '../../utils/pdfGenerator';
@@ -33,19 +35,43 @@ const InvoiceView: React.FC = () => {
 
   const handleDownloadPDF = async () => {
     if (!invoice) return;
+    
     try {
-      // Set preview to proper dimensions for export
-      const preview = document.getElementById('invoice-view-preview');
-      if (preview) {
-        preview.style.width = '210mm';
-        preview.style.height = 'auto';
-        preview.style.position = 'relative';
+      // Get auth token
+      const token = await getAccessToken();
+      
+      // Try server-side API first
+      const response = await fetch(`/api/invoices/${invoice.id}/pdf`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      
+      if (response.ok) {
+        // Server-side generation succeeded
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        const fileName = `invoice-${invoice.invoiceNumber}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return;
       }
       
+      // API not available or auth failed - use client-side generation
+      console.warn('Server-side PDF generation not available, using client-side generation');
       await generateInvoicePDF(invoice, 'invoice-view-preview');
     } catch (error) {
-      console.error('Download error:', error);
-      alert('Failed to download invoice: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      console.error('PDF generation error:', error);
+      // Fallback to client-side PDF generation
+      try {
+        await generateInvoicePDF(invoice, 'invoice-view-preview');
+      } catch (clientError) {
+        console.error('Client-side PDF generation also failed:', clientError);
+        alert('Failed to download invoice. Please try again.');
+      }
     }
   };
 
