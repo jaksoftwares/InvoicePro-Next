@@ -1,8 +1,8 @@
-// app/api/business-profiles/[id]/route.ts
-// GET: Get profile, PUT: Update profile, DELETE: Delete profile
+// app/api/invoices/[id]/route.ts
+// GET: Get invoice, PUT: Update invoice, DELETE: Delete invoice
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/authMiddleware';
-import { getProfile, updateProfile, deleteProfile } from '@/lib/services/businessProfile';
+import { getInvoice, updateInvoice, deleteInvoice } from '@/lib/services/invoice';
 
 export async function GET(
   request: NextRequest,
@@ -11,10 +11,10 @@ export async function GET(
   return withAuth(async (req, userId) => {
     const { id } = await params;
     try {
-      const profile = await getProfile(userId, id);
-      return NextResponse.json({ profile });
+      const invoice = await getInvoice(userId, id);
+      return NextResponse.json({ invoice });
     } catch {
-      return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
     }
   })(request);
 }
@@ -27,10 +27,10 @@ export async function PUT(
     const { id } = await params;
     try {
       const body = await req.json().catch(() => ({}));
-      const profile = await updateProfile(userId, id, body);
-      return NextResponse.json({ profile });
+      const invoice = await updateInvoice(userId, id, body);
+      return NextResponse.json({ invoice });
     } catch {
-      return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update invoice' }, { status: 500 });
     }
   })(request);
 }
@@ -42,10 +42,10 @@ export async function DELETE(
   return withAuth(async (req, userId) => {
     const { id } = await params;
     try {
-      await deleteProfile(userId, id);
+      await deleteInvoice(userId, id);
       return NextResponse.json({ success: true });
     } catch {
-      return NextResponse.json({ error: 'Failed to delete profile' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to delete invoice' }, { status: 500 });
     }
   })(request);
 }

@@ -1,5 +1,5 @@
 import html2canvas from 'html2canvas';
-import { Invoice } from '../types';
+import { Invoice, BusinessProfile } from '../types';
 import { format } from 'date-fns';
 import { PDFDocument } from 'pdf-lib';
 
@@ -7,18 +7,38 @@ const formatCurrency = (amount: number, currency: string) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
 };
 
+// Helper to safely get business profile with fallback
+const getBp = (invoice: Invoice): BusinessProfile => {
+  return invoice.businessProfile || {
+    id: '',
+    userId: '',
+    name: 'Your Business',
+    email: 'business@example.com',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+};
+
 // Template generators with simplified inline styles
 const templates: Record<string, (invoice: Invoice) => string> = {
-  modern: (invoice) => `
+  modern: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: system-ui, -apple-system, sans-serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Header with gradient effect using solid color -->
       <div style="background: linear-gradient(to right, #2563eb, #4338ca); color: white; padding: 24px; margin: -32px -32px 32px -32px; border-radius: 8px 8px 0 0;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div style="display: flex; align-items: center; gap: 16px;">
-            ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 48px; width: 48px; object-fit: contain; background: white; padding: 8px; border-radius: 8px;">` : ''}
+            ${bp.logo ? `<img src="${bp.logo}" alt="Logo" style="height: 48px; width: 48px; object-fit: contain; background: white; padding: 8px; border-radius: 8px;">` : ''}
             <div>
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${invoice.businessProfile.name}</h1>
-              <p style="margin: 4px 0 0 0; font-size: 14px; color: #bfdbfe;">${invoice.businessProfile.email}</p>
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${bp.name}</h1>
+              <p style="margin: 4px 0 0 0; font-size: 14px; color: #bfdbfe;">${bp.email}</p>
             </div>
           </div>
           <div style="text-align: right;">
@@ -49,12 +69,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div>
           <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #111827; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">From</h3>
           <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0; color: #2563eb;">${invoice.businessProfile.email}</p>
-            <p style="margin: 0;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 600; color: #111827;">${bp.name}</p>
+            <p style="margin: 0;">${bp.address}</p>
+            <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+            <p style="margin: 0;">${bp.country}</p>
+            <p style="margin: 0; color: #2563eb;">${bp.email}</p>
+            <p style="margin: 0;">${bp.phone}</p>
           </div>
         </div>
         <div>
@@ -138,18 +158,21 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  classic: (invoice) => `
+  classic: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: Georgia, serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Elegant Header -->
       <div style="text-align: center; margin-bottom: 32px; border-bottom: 4px solid #1f2937; padding-bottom: 24px;">
-        ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 80px; width: 80px; object-fit: contain; border: 2px solid #d1d5db; border-radius: 50%; padding: 8px; margin-bottom: 16px;">` : ''}
-        <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: bold; color: #1f2937;">${invoice.businessProfile.name}</h1>
+        ${bp.logo ? `<img src="${bp.logo}" alt="Logo" style="height: 80px; width: 80px; object-fit: contain; border: 2px solid #d1d5db; border-radius: 50%; padding: 8px; margin-bottom: 16px;">` : ''}
+        <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: bold; color: #1f2937;">${bp.name}</h1>
         <div style="font-size: 14px; color: #6b7280; line-height: 1.6;">
-          <p style="margin: 0;">${invoice.businessProfile.address}</p>
-          <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-          <p style="margin: 0;">${invoice.businessProfile.phone} | ${invoice.businessProfile.email}</p>
+          <p style="margin: 0;">${bp.address}</p>
+          <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+          <p style="margin: 0;">${bp.phone} | ${bp.email}</p>
         </div>
       </div>
 
@@ -180,12 +203,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div style="border: 2px solid #d1d5db; padding: 24px;">
           <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #1f2937; text-decoration: underline; text-decoration-thickness: 2px;">Bill From:</h3>
           <div style="font-size: 14px; color: #374151; line-height: 1.8;">
-            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0;">${invoice.businessProfile.email}</p>
-            <p style="margin: 0;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 600; color: #111827;">${bp.name}</p>
+            <p style="margin: 0;">${bp.address}</p>
+            <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+            <p style="margin: 0;">${bp.country}</p>
+            <p style="margin: 0;">${bp.email}</p>
+            <p style="margin: 0;">${bp.phone}</p>
           </div>
         </div>
         <div style="border: 2px solid #d1d5db; padding: 24px;">
@@ -273,17 +296,20 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  minimal: (invoice) => `
+  minimal: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: Inter, system-ui, sans-serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Clean Header -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 1px solid #e5e7eb;">
         <div style="display: flex; align-items: center; gap: 16px;">
-          ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;">` : ''}
+          ${bp.logo ? `<img src="${bp.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;">` : ''}
           <div>
-            <h1 style="margin: 0; font-size: 24px; font-weight: 300; color: #111827;">${invoice.businessProfile.name}</h1>
-            <p style="margin: 4px 0 0 0; font-size: 14px; color: #9ca3af;">${invoice.businessProfile.email}</p>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 300; color: #111827;">${bp.name}</h1>
+            <p style="margin: 4px 0 0 0; font-size: 14px; color: #9ca3af;">${bp.email}</p>
           </div>
         </div>
         <div style="text-align: right;">
@@ -317,11 +343,11 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div>
           <p style="margin: 0 0 12px 0; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em;">From</p>
           <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-            <p style="margin: 0; font-weight: 500; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0; color: #9ca3af;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 500; color: #111827;">${bp.name}</p>
+            <p style="margin: 0;">${bp.address}</p>
+            <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+            <p style="margin: 0;">${bp.country}</p>
+            <p style="margin: 0; color: #9ca3af;">${bp.phone}</p>
           </div>
         </div>
         <div>
@@ -398,21 +424,24 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  professional: (invoice) => `
+  professional: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: Helvetica, Arial, sans-serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Professional Header -->
       <div style="border-bottom: 4px solid #2563eb; padding-bottom: 24px; margin-bottom: 32px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div style="display: flex; align-items: center; gap: 24px;">
-            ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 80px; width: 80px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px;">` : ''}
+            ${bp.logo ? `<img src="${bp.logo}" alt="Logo" style="height: 80px; width: 80px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px;">` : ''}
             <div>
-              <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #1f2937;">${invoice.businessProfile.name}</h1>
+              <h1 style="margin: 0; font-size: 28px; font-weight: bold; color: #1f2937;">${bp.name}</h1>
               <div style="margin-top: 8px; font-size: 14px; color: #6b7280; line-height: 1.6;">
-                <p style="margin: 0;">${invoice.businessProfile.address}</p>
-                <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-                <p style="margin: 0;">Tel: ${invoice.businessProfile.phone} | Email: ${invoice.businessProfile.email}</p>
+                <p style="margin: 0;">${bp.address}</p>
+                <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+                <p style="margin: 0;">Tel: ${bp.phone} | Email: ${bp.email}</p>
               </div>
             </div>
           </div>
@@ -534,18 +563,21 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  corporate: (invoice) => `
+  corporate: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: 'Times New Roman', serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Corporate Header -->
       <div style="background: #111827; color: white; padding: 24px; margin: -32px -32px 32px -32px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 16px;">
-            ${invoice.businessProfile.logo ? `<div style="background: white; padding: 8px; border-radius: 4px;"><img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;"></div>` : ''}
+            ${bp.logo ? `<div style="background: white; padding: 8px; border-radius: 4px;"><img src="${bp.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;"></div>` : ''}
             <div>
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${invoice.businessProfile.name}</h1>
-              <p style="margin: 4px 0 0 0; font-size: 14px; color: #9ca3af;">${invoice.businessProfile.email}</p>
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${bp.name}</h1>
+              <p style="margin: 4px 0 0 0; font-size: 14px; color: #9ca3af;">${bp.email}</p>
             </div>
           </div>
           <div style="text-align: right;">
@@ -576,12 +608,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div style="border: 1px solid #d1d5db; padding: 24px;">
           <h3 style="margin: -24px -24px 16px -24px; font-size: 16px; font-weight: bold; color: white; background: #111827; padding: 8px 24px;">FROM</h3>
           <div style="font-size: 14px; color: #374151; line-height: 1.8; margin-top: 16px;">
-            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0;">${invoice.businessProfile.email}</p>
-            <p style="margin: 0;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 600; color: #111827;">${bp.name}</p>
+            <p style="margin: 0;">${bp.address}</p>
+            <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+            <p style="margin: 0;">${bp.country}</p>
+            <p style="margin: 0;">${bp.email}</p>
+            <p style="margin: 0;">${bp.phone}</p>
           </div>
         </div>
         <div style="border: 1px solid #d1d5db; padding: 24px;">
@@ -669,18 +701,21 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  elegant: (invoice) => `
+  elegant: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: 'Playfair Display', Georgia, serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Elegant Header -->
       <div style="text-align: center; margin-bottom: 48px; border-bottom: 1px solid #d1d5db; padding-bottom: 32px;">
-        ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 96px; width: 96px; object-fit: contain; border: 4px solid #e5e7eb; border-radius: 50%; padding: 12px; margin-bottom: 24px;">` : ''}
-        <h1 style="margin: 0 0 12px 0; font-size: 36px; font-weight: bold; color: #1f2937;">${invoice.businessProfile.name}</h1>
+        ${bp.logo ? `<img src="${bp.logo}" alt="Logo" style="height: 96px; width: 96px; object-fit: contain; border: 4px solid #e5e7eb; border-radius: 50%; padding: 12px; margin-bottom: 24px;">` : ''}
+        <h1 style="margin: 0 0 12px 0; font-size: 36px; font-weight: bold; color: #1f2937;">${bp.name}</h1>
         <div style="font-size: 14px; color: #6b7280; line-height: 1.8; font-style: italic;">
-          <p style="margin: 0;">${invoice.businessProfile.address}</p>
-          <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-          <p style="margin: 0;">${invoice.businessProfile.phone} • ${invoice.businessProfile.email}</p>
+          <p style="margin: 0;">${bp.address}</p>
+          <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+          <p style="margin: 0;">${bp.phone} • ${bp.email}</p>
         </div>
       </div>
 
@@ -789,9 +824,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 
-  creative: (invoice) => `
+  creative: (invoice) => {
+    const bp = getBp(invoice);
+    return `
     <div style="font-family: Poppin, system-ui, sans-serif; width: 794px; min-height: 1123px; padding: 32px; background: white; box-sizing: border-box;">
       <!-- Creative Header -->
       <div style="position: relative; margin-bottom: 48px;">
@@ -799,10 +837,10 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div style="position: relative; background: white; padding: 32px; border-radius: 16px; border: 2px solid #f3f4f6;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="display: flex; align-items: center; gap: 24px;">
-              ${invoice.businessProfile.logo ? `<div style="background: linear-gradient(to bottom right, #ddd6fe, #fce7f3); padding: 12px; border-radius: 12px;"><img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;"></div>` : ''}
+              ${bp.logo ? `<div style="background: linear-gradient(to bottom right, #ddd6fe, #fce7f3); padding: 12px; border-radius: 12px;"><img src="${bp.logo}" alt="Logo" style="height: 64px; width: 64px; object-fit: contain;"></div>` : ''}
               <div>
-                <h1 style="margin: 0; font-size: 28px; font-weight: bold; background: linear-gradient(to right, #9333ea, #db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${invoice.businessProfile.name}</h1>
-                <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">${invoice.businessProfile.email}</p>
+                <h1 style="margin: 0; font-size: 28px; font-weight: bold; background: linear-gradient(to right, #9333ea, #db2777); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">${bp.name}</h1>
+                <p style="margin: 4px 0 0 0; font-size: 14px; color: #6b7280;">${bp.email}</p>
               </div>
             </div>
             <div style="text-align: right;">
@@ -862,12 +900,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
             From
           </h3>
           <div style="font-size: 14px; color: #374151; line-height: 1.8;">
-            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0; color: #a855f7;">${invoice.businessProfile.email}</p>
-            <p style="margin: 0;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 600; color: #111827;">${bp.name}</p>
+            <p style="margin: 0;">${bp.address}</p>
+            <p style="margin: 0;">${bp.city}, ${bp.state} ${bp.zipCode}</p>
+            <p style="margin: 0;">${bp.country}</p>
+            <p style="margin: 0; color: #a855f7;">${bp.email}</p>
+            <p style="margin: 0;">${bp.phone}</p>
           </div>
         </div>
         <div style="background: #fdf2f8; padding: 24px; border-radius: 16px;">
@@ -959,7 +997,8 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       </div>
       ` : ''}
     </div>
-  `,
+    `;
+  },
 };
 
 export const generateInvoicePDF = async (invoice: Invoice, elementId: string): Promise<void> => {
@@ -1166,4 +1205,4 @@ export const generateInvoicePDF = async (invoice: Invoice, elementId: string): P
   } catch (error) {
     throw error;
   }
-}
+};

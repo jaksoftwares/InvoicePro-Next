@@ -12,7 +12,7 @@ import EmailModal from './EmailModal';
 import SEO from '../SEO';
 import { useCurrency } from '../../context/CurrencyContext';
 
-const InvoiceCreator: React.FC = () => {
+const InvoiceCreator = () => {
   const router = useRouter();
   const params = useParams();
   const id = params?.id as string | undefined;
@@ -21,7 +21,7 @@ const InvoiceCreator: React.FC = () => {
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState<BusinessProfile | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
-  const [invoice, setInvoice] = useState<Partial<Invoice>>({
+  const [invoice, setInvoice] = useState<Partial<Invoice> & { userId?: string }>({
     invoiceNumber: generateInvoiceNumber(),
     clientName: '',
     clientEmail: '',
@@ -45,6 +45,7 @@ const InvoiceCreator: React.FC = () => {
     status: 'draft',
     template: 'modern',
     currency: 'USD',
+    userId: '',
   });
   const [showPreview, setShowPreview] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,7 +74,7 @@ const InvoiceCreator: React.FC = () => {
         const savedInvoice = storageUtils.getInvoiceById(id);
         if (savedInvoice) {
           setInvoice(savedInvoice);
-          setSelectedProfile(savedInvoice.businessProfile);
+          setSelectedProfile(savedInvoice.businessProfile ? savedInvoice.businessProfile : null);
         }
       } else if (currentProfile) {
         setSelectedProfile(currentProfile);
@@ -100,6 +101,7 @@ const InvoiceCreator: React.FC = () => {
   const addItem = () => {
     const newItem: InvoiceItem = {
       id: Date.now().toString(),
+      invoiceId: '',
       description: '',
       quantity: 1,
       rate: 0,
@@ -111,14 +113,14 @@ const InvoiceCreator: React.FC = () => {
     }));
   };
 
-  const updateItem = (itemId: string, field: keyof InvoiceItem, value: string | number) => {
+  const updateItem = (itemId: string, field: keyof InvoiceItem, value: string | number | '') => {
     setInvoice(prev => ({
       ...prev,
       items: (prev.items || []).map(item => {
         if (item.id === itemId) {
-          const updatedItem = { ...item, [field]: value };
+          const updatedItem = { ...item, [field]: value === '' ? (field === 'description' ? '' : 0) : value };
           if (field === 'quantity' || field === 'rate') {
-            updatedItem.amount = updatedItem.quantity * updatedItem.rate;
+            updatedItem.amount = Number(updatedItem.quantity) * Number(updatedItem.rate);
           }
           return updatedItem;
         }
@@ -144,6 +146,40 @@ const InvoiceCreator: React.FC = () => {
     calculateTotals();
   }, [invoice.items, invoice.taxRate, invoice.discountRate]);
 
+  const buildInvoiceData = (): Invoice => {
+    return {
+      id: invoice.id || Date.now().toString(),
+      userId: invoice.userId || '',
+      businessProfileId: selectedProfile?.id || '',
+      invoiceNumber: invoice.invoiceNumber!,
+      businessProfile: selectedProfile!,
+      clientName: invoice.clientName!,
+      clientEmail: invoice.clientEmail!,
+      clientPhone: invoice.clientPhone || '',
+      clientAddress: invoice.clientAddress || '',
+      clientCity: invoice.clientCity || '',
+      clientState: invoice.clientState || '',
+      clientZipCode: invoice.clientZipCode || '',
+      clientCountry: invoice.clientCountry || '',
+      items: invoice.items!,
+      subtotal: invoice.subtotal!,
+      taxRate: invoice.taxRate!,
+      taxAmount: invoice.taxAmount!,
+      discountRate: invoice.discountRate!,
+      discountAmount: invoice.discountAmount!,
+      total: invoice.total!,
+      notes: invoice.notes || '',
+      terms: invoice.terms || '',
+      dueDate: invoice.dueDate!,
+      issueDate: invoice.issueDate!,
+      status: invoice.status!,
+      template: invoice.template!,
+      currency: invoice.currency!,
+      createdAt: invoice.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+  };
+
   const handleSave = async () => {
     if (!selectedProfile) {
       alert('Please select a business profile');
@@ -163,35 +199,7 @@ const InvoiceCreator: React.FC = () => {
     setIsSaving(true);
 
     try {
-      const invoiceData: Invoice = {
-        id: invoice.id || Date.now().toString(),
-        invoiceNumber: invoice.invoiceNumber!,
-        businessProfile: selectedProfile,
-        clientName: invoice.clientName!,
-        clientEmail: invoice.clientEmail!,
-        clientPhone: invoice.clientPhone || '',
-        clientAddress: invoice.clientAddress || '',
-        clientCity: invoice.clientCity || '',
-        clientState: invoice.clientState || '',
-        clientZipCode: invoice.clientZipCode || '',
-        clientCountry: invoice.clientCountry || '',
-        items: invoice.items!,
-        subtotal: invoice.subtotal!,
-        taxRate: invoice.taxRate!,
-        taxAmount: invoice.taxAmount!,
-        discountRate: invoice.discountRate!,
-        discountAmount: invoice.discountAmount!,
-        total: invoice.total!,
-        notes: invoice.notes || '',
-        terms: invoice.terms || '',
-        dueDate: invoice.dueDate!,
-        issueDate: invoice.issueDate!,
-        status: invoice.status!,
-        template: invoice.template!,
-        currency: invoice.currency!,
-        createdAt: invoice.createdAt || new Date(),
-        updatedAt: new Date(),
-      };
+      const invoiceData = buildInvoiceData();
 
       storageUtils.saveInvoice(invoiceData);
       alert('Invoice saved successfully!');
@@ -216,35 +224,7 @@ const InvoiceCreator: React.FC = () => {
     setIsDownloading(true);
 
     try {
-      const invoiceData: Invoice = {
-        id: invoice.id || Date.now().toString(),
-        invoiceNumber: invoice.invoiceNumber!,
-        businessProfile: selectedProfile,
-        clientName: invoice.clientName!,
-        clientEmail: invoice.clientEmail!,
-        clientPhone: invoice.clientPhone || '',
-        clientAddress: invoice.clientAddress || '',
-        clientCity: invoice.clientCity || '',
-        clientState: invoice.clientState || '',
-        clientZipCode: invoice.clientZipCode || '',
-        clientCountry: invoice.clientCountry || '',
-        items: invoice.items!,
-        subtotal: invoice.subtotal!,
-        taxRate: invoice.taxRate!,
-        taxAmount: invoice.taxAmount!,
-        discountRate: invoice.discountRate!,
-        discountAmount: invoice.discountAmount!,
-        total: invoice.total!,
-        notes: invoice.notes || '',
-        terms: invoice.terms || '',
-        dueDate: invoice.dueDate!,
-        issueDate: invoice.issueDate!,
-        status: invoice.status!,
-        template: invoice.template!,
-        currency: invoice.currency!,
-        createdAt: invoice.createdAt || new Date(),
-        updatedAt: new Date(),
-      };
+      const invoiceData = buildInvoiceData();
 
       // Prepare preview for export
       const preview = document.getElementById('invoice-preview');
@@ -280,37 +260,7 @@ const InvoiceCreator: React.FC = () => {
     setShowEmailModal(true);
   };
 
-  const getCompleteInvoice = (): Invoice => {
-    return {
-      id: invoice.id || Date.now().toString(),
-      invoiceNumber: invoice.invoiceNumber!,
-      businessProfile: selectedProfile!,
-      clientName: invoice.clientName!,
-      clientEmail: invoice.clientEmail!,
-      clientPhone: invoice.clientPhone || '',
-      clientAddress: invoice.clientAddress || '',
-      clientCity: invoice.clientCity || '',
-      clientState: invoice.clientState || '',
-      clientZipCode: invoice.clientZipCode || '',
-      clientCountry: invoice.clientCountry || '',
-      items: invoice.items!,
-      subtotal: invoice.subtotal!,
-      taxRate: invoice.taxRate!,
-      taxAmount: invoice.taxAmount!,
-      discountRate: invoice.discountRate!,
-      discountAmount: invoice.discountAmount!,
-      total: invoice.total!,
-      notes: invoice.notes || '',
-      terms: invoice.terms || '',
-      dueDate: invoice.dueDate!,
-      issueDate: invoice.issueDate!,
-      status: invoice.status!,
-      template: invoice.template!,
-      currency: invoice.currency!,
-      createdAt: invoice.createdAt || new Date(),
-      updatedAt: new Date(),
-    };
-  };
+  const getCompleteInvoice = (): Invoice => buildInvoiceData();
 
   // Helper for input fallback
   const getInputValue = (val: number | undefined) => (val === undefined || val === null) ? '' : val;
@@ -645,7 +595,7 @@ const InvoiceCreator: React.FC = () => {
                     <option value="UGX">UGX - Ugandan Shilling (USh)</option>
                     <option value="USD">USD - US Dollar ($)</option>
                     <option value="UYU">UYU - Uruguayan Peso ($U)</option>
-                    <option value="UZS">UZS - Uzbekistani Som (so'm)</option>
+                    <option value="UZS">UZS - Uzbekistani Som (so&apos;m)</option>
                     <option value="VES">VES - Venezuelan Bolívar (Bs.)</option>
                     <option value="VND">VND - Vietnamese Đồng (₫)</option>
                     <option value="VUV">VUV - Vanuatu Vatu (VT)</option>
