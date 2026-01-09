@@ -1,4 +1,4 @@
-import emailjs from 'emailjs-com';
+import emailjs, { init } from 'emailjs-com';
 import { Invoice } from '../types';
 import { formatCurrency } from './invoiceHelpers';
 import { format } from 'date-fns';
@@ -9,6 +9,9 @@ const EMAIL_CONFIG = {
   TEMPLATE_ID: 'your_template_id', // Replace with your EmailJS template ID
   PUBLIC_KEY: 'your_public_key', // Replace with your EmailJS public key
 };
+
+// Initialize EmailJS
+init(EMAIL_CONFIG.PUBLIC_KEY);
 
 export interface EmailData {
   to_email: string;
@@ -21,6 +24,7 @@ export interface EmailData {
   invoice_total: string;
   due_date: string;
   business_name: string;
+  [key: string]: string;
 }
 
 export const sendInvoiceEmail = async (
@@ -29,22 +33,17 @@ export const sendInvoiceEmail = async (
   attachmentUrl?: string
 ): Promise<boolean> => {
   try {
-    // Initialize EmailJS if not already done
-    if (!emailjs.init) {
-      emailjs.init(EMAIL_CONFIG.PUBLIC_KEY);
-    }
-
     const emailData: EmailData = {
       to_email: invoice.clientEmail,
       to_name: invoice.clientName,
-      from_name: invoice.businessProfile.name,
-      from_email: invoice.businessProfile.email,
-      subject: `Invoice ${invoice.invoiceNumber} from ${invoice.businessProfile.name}`,
+      from_name: invoice.businessProfile?.name || '',
+      from_email: invoice.businessProfile?.email || '',
+      subject: `Invoice ${invoice.invoiceNumber} from ${invoice.businessProfile?.name || ''}`,
       message: customMessage || generateDefaultEmailMessage(invoice),
       invoice_number: invoice.invoiceNumber,
       invoice_total: formatCurrency(invoice.total, invoice.currency),
       due_date: format(new Date(invoice.dueDate), 'MMMM dd, yyyy'),
-      business_name: invoice.businessProfile.name,
+      business_name: invoice.businessProfile?.name || '',
     };
 
     const response = await emailjs.send(
@@ -81,9 +80,9 @@ Please don't hesitate to contact us if you have any questions regarding this inv
 Thank you for your business!
 
 Best regards,
-${invoice.businessProfile.name}
-${invoice.businessProfile.email}
-${invoice.businessProfile.phone}`;
+${invoice.businessProfile?.name || ''}
+${invoice.businessProfile?.email || ''}
+${invoice.businessProfile?.phone || ''}`;
 };
 
 export const validateEmailConfiguration = (): boolean => {

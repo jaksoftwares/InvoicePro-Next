@@ -14,18 +14,18 @@ const ModernTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 -m-8 mb-8 rounded-t-lg">
       <div className="flex justify-between items-start">
         <div className="flex items-center space-x-4">
-          {invoice.businessProfile.logo && (
+          {invoice.businessProfile?.logo && (
             <div className="bg-white p-2 rounded-lg">
               <img
-                src={invoice.businessProfile.logo}
+                src={invoice.businessProfile?.logo}
                 alt="Business Logo"
                 className="h-12 w-12 object-contain"
               />
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{invoice.businessProfile.name}</h1>
-            <p className="text-blue-100 text-sm">{invoice.businessProfile.email}</p>
+            <h1 className="text-2xl font-bold">{invoice.businessProfile?.name}</h1>
+            <p className="text-blue-100 text-sm">{invoice.businessProfile?.email}</p>
           </div>
         </div>
         <div className="text-right">
@@ -56,12 +56,12 @@ const ModernTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 border-b-2 border-blue-600 pb-2">From</h3>
         <div className="space-y-1 text-sm text-gray-700">
-          <p className="font-semibold text-gray-900">{invoice.businessProfile.name}</p>
-          <p>{invoice.businessProfile.address}</p>
-          <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-          <p>{invoice.businessProfile.country}</p>
-          <p className="text-blue-600">{invoice.businessProfile.email}</p>
-          <p>{invoice.businessProfile.phone}</p>
+          <p className="font-semibold text-gray-900">{invoice.businessProfile?.name}</p>
+          <p>{invoice.businessProfile?.address}</p>
+          <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+          <p>{invoice.businessProfile?.country}</p>
+          <p className="text-blue-600">{invoice.businessProfile?.email}</p>
+          <p>{invoice.businessProfile?.phone}</p>
         </div>
       </div>
 
@@ -162,18 +162,18 @@ const ClassicTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
   <div className="bg-white p-8 shadow-lg min-h-[297mm]" style={{ fontFamily: 'Georgia, serif' }}>
     {/* Elegant Header */}
     <div className="text-center mb-8 border-b-4 border-gray-800 pb-6">
-      {invoice.businessProfile.logo && (
+      {invoice.businessProfile?.logo && (
         <img
-          src={invoice.businessProfile.logo}
+          src={invoice.businessProfile?.logo}
           alt="Business Logo"
           className="h-20 w-20 object-contain mx-auto mb-4 border-2 border-gray-300 rounded-full p-2"
         />
       )}
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">{invoice.businessProfile.name}</h1>
+      <h1 className="text-3xl font-bold text-gray-800 mb-2">{invoice.businessProfile?.name}</h1>
       <div className="text-sm text-gray-600 space-y-1">
-        <p>{invoice.businessProfile.address}</p>
-        <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-        <p>{invoice.businessProfile.phone} | {invoice.businessProfile.email}</p>
+        <p>{invoice.businessProfile?.address}</p>
+        <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+        <p>{invoice.businessProfile?.phone} | {invoice.businessProfile?.email}</p>
       </div>
     </div>
 
@@ -204,12 +204,12 @@ const ClassicTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
       <div className="border-2 border-gray-300 p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-4 underline decoration-2">Bill From:</h3>
         <div className="space-y-2 text-sm text-gray-700">
-          <p className="font-bold text-gray-900">{invoice.businessProfile.name}</p>
-          <p>{invoice.businessProfile.address}</p>
-          <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-          <p>{invoice.businessProfile.country}</p>
-          <p>{invoice.businessProfile.email}</p>
-          <p>{invoice.businessProfile.phone}</p>
+          <p className="font-bold text-gray-900">{invoice.businessProfile?.name}</p>
+          <p>{invoice.businessProfile?.address}</p>
+          <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+          <p>{invoice.businessProfile?.country}</p>
+          <p>{invoice.businessProfile?.email}</p>
+          <p>{invoice.businessProfile?.phone}</p>
         </div>
       </div>
 
@@ -309,16 +309,16 @@ const MinimalTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
     {/* Clean Header */}
     <div className="flex justify-between items-start mb-12 pb-6 border-b border-gray-200">
       <div className="flex items-center space-x-4">
-        {invoice.businessProfile.logo && (
+        {invoice.businessProfile?.logo && (
           <img
-            src={invoice.businessProfile.logo}
+            src={invoice.businessProfile?.logo}
             alt="Business Logo"
             className="h-16 w-16 object-contain"
           />
         )}
         <div>
-          <h1 className="text-2xl font-light text-gray-900">{invoice.businessProfile.name}</h1>
-          <p className="text-sm text-gray-500">{invoice.businessProfile.email}</p>
+          <h1 className="text-2xl font-light text-gray-900">{invoice.businessProfile?.name}</h1>
+          <p className="text-sm text-gray-500">{invoice.businessProfile?.email}</p>
         </div>
       </div>
       <div className="text-right">
@@ -352,11 +352,11 @@ const MinimalTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
       <div>
         <p className="text-xs text-gray-400 uppercase tracking-wider mb-3">From</p>
         <div className="space-y-1 text-sm text-gray-700">
-          <p className="font-medium text-gray-900">{invoice.businessProfile.name}</p>
-          <p>{invoice.businessProfile.address}</p>
-          <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-          <p>{invoice.businessProfile.country}</p>
-          <p className="text-gray-500">{invoice.businessProfile.phone}</p>
+          <p className="font-medium text-gray-900">{invoice.businessProfile?.name}</p>
+          <p>{invoice.businessProfile?.address}</p>
+          <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+          <p>{invoice.businessProfile?.country}</p>
+          <p className="text-gray-500">{invoice.businessProfile?.phone}</p>
         </div>
       </div>
 
@@ -463,19 +463,19 @@ const ProfessionalTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
     <div className="border-b-4 border-blue-600 pb-6 mb-8">
       <div className="flex justify-between items-start">
         <div className="flex items-center space-x-6">
-          {invoice.businessProfile.logo && (
+          {invoice.businessProfile?.logo && (
             <img
-              src={invoice.businessProfile.logo}
+              src={invoice.businessProfile?.logo}
               alt="Business Logo"
               className="h-20 w-20 object-contain border border-gray-200 rounded-lg p-2"
             />
           )}
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">{invoice.businessProfile.name}</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{invoice.businessProfile?.name}</h1>
             <div className="mt-2 text-sm text-gray-600 space-y-1">
-              <p>{invoice.businessProfile.address}</p>
-              <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-              <p>Tel: {invoice.businessProfile.phone} | Email: {invoice.businessProfile.email}</p>
+              <p>{invoice.businessProfile?.address}</p>
+              <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+              <p>Tel: {invoice.businessProfile?.phone} | Email: {invoice.businessProfile?.email}</p>
             </div>
           </div>
         </div>
@@ -613,18 +613,18 @@ const CorporateTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
     <div className="bg-gray-900 text-white p-6 -m-8 mb-8">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          {invoice.businessProfile.logo && (
+          {invoice.businessProfile?.logo && (
             <div className="bg-white p-2 rounded">
               <img
-                src={invoice.businessProfile.logo}
+                src={invoice.businessProfile?.logo}
                 alt="Business Logo"
                 className="h-16 w-16 object-contain"
               />
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold">{invoice.businessProfile.name}</h1>
-            <p className="text-gray-300 text-sm">{invoice.businessProfile.email}</p>
+            <h1 className="text-2xl font-bold">{invoice.businessProfile?.name}</h1>
+            <p className="text-gray-300 text-sm">{invoice.businessProfile?.email}</p>
           </div>
         </div>
         <div className="text-right">
@@ -655,12 +655,12 @@ const CorporateTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
       <div className="border border-gray-300 p-6">
         <h3 className="text-lg font-bold text-gray-900 mb-4 bg-gray-900 text-white p-2 -m-6 mb-4">FROM</h3>
         <div className="space-y-2 text-sm text-gray-700 mt-4">
-          <p className="font-bold text-gray-900">{invoice.businessProfile.name}</p>
-          <p>{invoice.businessProfile.address}</p>
-          <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-          <p>{invoice.businessProfile.country}</p>
-          <p>{invoice.businessProfile.email}</p>
-          <p>{invoice.businessProfile.phone}</p>
+          <p className="font-bold text-gray-900">{invoice.businessProfile?.name}</p>
+          <p>{invoice.businessProfile?.address}</p>
+          <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+          <p>{invoice.businessProfile?.country}</p>
+          <p>{invoice.businessProfile?.email}</p>
+          <p>{invoice.businessProfile?.phone}</p>
         </div>
       </div>
 
@@ -759,18 +759,18 @@ const ElegantTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
   <div className="bg-white p-8 shadow-lg min-h-[297mm]" style={{ fontFamily: 'Playfair Display, serif' }}>
     {/* Elegant Header */}
     <div className="text-center mb-12 border-b border-gray-300 pb-8">
-      {invoice.businessProfile.logo && (
+      {invoice.businessProfile?.logo && (
         <img
-          src={invoice.businessProfile.logo}
+          src={invoice.businessProfile?.logo}
           alt="Business Logo"
           className="h-24 w-24 object-contain mx-auto mb-6 rounded-full border-4 border-gray-200 p-2"
         />
       )}
-      <h1 className="text-4xl font-bold text-gray-800 mb-3">{invoice.businessProfile.name}</h1>
+      <h1 className="text-4xl font-bold text-gray-800 mb-3">{invoice.businessProfile?.name}</h1>
       <div className="text-sm text-gray-600 space-y-1 italic">
-        <p>{invoice.businessProfile.address}</p>
-        <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-        <p>{invoice.businessProfile.phone} • {invoice.businessProfile.email}</p>
+        <p>{invoice.businessProfile?.address}</p>
+        <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+        <p>{invoice.businessProfile?.phone} • {invoice.businessProfile?.email}</p>
       </div>
     </div>
 
@@ -891,10 +891,10 @@ const CreativeTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
       <div className="relative bg-white p-8 rounded-2xl border-2 border-gray-100">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-6">
-            {invoice.businessProfile.logo && (
+            {invoice.businessProfile?.logo && (
               <div className="bg-gradient-to-br from-purple-100 to-pink-100 p-3 rounded-xl">
                 <img
-                  src={invoice.businessProfile.logo}
+                  src={invoice.businessProfile?.logo}
                   alt="Business Logo"
                   className="h-16 w-16 object-contain"
                 />
@@ -902,9 +902,9 @@ const CreativeTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
             )}
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                {invoice.businessProfile.name}
+                {invoice.businessProfile?.name}
               </h1>
-              <p className="text-gray-600 mt-1">{invoice.businessProfile.email}</p>
+              <p className="text-gray-600 mt-1">{invoice.businessProfile?.email}</p>
             </div>
           </div>
           <div className="text-right">
@@ -975,12 +975,12 @@ const CreativeTemplate: React.FC<{ invoice: Invoice }> = ({ invoice }) => (
           From
         </h3>
         <div className="space-y-2 text-sm text-gray-700">
-          <p className="font-bold text-gray-900">{invoice.businessProfile.name}</p>
-          <p>{invoice.businessProfile.address}</p>
-          <p>{invoice.businessProfile.city}, {invoice.businessProfile.state} {invoice.businessProfile.zipCode}</p>
-          <p>{invoice.businessProfile.country}</p>
-          <p className="text-purple-600">{invoice.businessProfile.email}</p>
-          <p>{invoice.businessProfile.phone}</p>
+          <p className="font-bold text-gray-900">{invoice.businessProfile?.name}</p>
+          <p>{invoice.businessProfile?.address}</p>
+          <p>{invoice.businessProfile?.city}, {invoice.businessProfile?.state} {invoice.businessProfile?.zipCode}</p>
+          <p>{invoice.businessProfile?.country}</p>
+          <p className="text-purple-600">{invoice.businessProfile?.email}</p>
+          <p>{invoice.businessProfile?.phone}</p>
         </div>
       </div>
 

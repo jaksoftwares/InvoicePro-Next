@@ -55,7 +55,7 @@ Please don't hesitate to contact us if you have any questions regarding this inv
 Thank you for your business!
 
 Best regards,
-${invoice.businessProfile.name}`;
+${invoice.businessProfile?.name ?? 'Business'}`
 
   if (!isOpen) return null;
 
@@ -97,7 +97,7 @@ ${invoice.businessProfile.name}`;
             </label>
             <input
               type="text"
-              value={`Invoice ${invoice.invoiceNumber} from ${invoice.businessProfile.name}`}
+              value={`Invoice ${invoice.invoiceNumber} from ${invoice.businessProfile?.name ?? ''}`}
               readOnly
               className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
             />

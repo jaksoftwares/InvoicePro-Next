@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PDFDocument } from 'pdf-lib';
 import { Invoice } from '../types';
 import { format } from 'date-fns';
@@ -13,10 +14,10 @@ const templates: Record<string, (invoice: Invoice) => string> = {
       <div style="background: linear-gradient(to right, #2563eb, #4338ca); color: white; padding: 24px; margin: -32px -32px 32px -32px; border-radius: 8px 8px 0 0;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div style="display: flex; align-items: center; gap: 16px;">
-            ${invoice.businessProfile.logo ? `<img src="${invoice.businessProfile.logo}" alt="Logo" style="height: 48px; width: 48px; object-fit: contain; background: white; padding: 8px; border-radius: 8px;">` : ''}
+            ${invoice.businessProfile?.logo ? `<img src="${invoice.businessProfile?.logo || ''}" alt="Logo" style="height: 48px; width: 48px; object-fit: contain; background: white; padding: 8px; border-radius: 8px;">` : ''}
             <div>
-              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${invoice.businessProfile.name}</h1>
-              <p style="margin: 4px 0 0 0; font-size: 14px; color: #bfdbfe;">${invoice.businessProfile.email}</p>
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">${invoice.businessProfile?.name}</h1>
+              <p style="margin: 4px 0 0 0; font-size: 14px; color: #bfdbfe;">${invoice.businessProfile?.email}</p>
             </div>
           </div>
           <div style="text-align: right;">
@@ -45,12 +46,12 @@ const templates: Record<string, (invoice: Invoice) => string> = {
         <div>
           <h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 600; color: #111827; border-bottom: 2px solid #2563eb; padding-bottom: 8px;">From</h3>
           <div style="font-size: 14px; color: #374151; line-height: 1.6;">
-            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile.name}</p>
-            <p style="margin: 0;">${invoice.businessProfile.address}</p>
-            <p style="margin: 0;">${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}</p>
-            <p style="margin: 0;">${invoice.businessProfile.country}</p>
-            <p style="margin: 0; color: #2563eb;">${invoice.businessProfile.email}</p>
-            <p style="margin: 0;">${invoice.businessProfile.phone}</p>
+            <p style="margin: 0; font-weight: 600; color: #111827;">${invoice.businessProfile?.name}</p>
+            <p style="margin: 0;">${invoice.businessProfile?.address}</p>
+            <p style="margin: 0;">${invoice.businessProfile?.city}, ${invoice.businessProfile?.state} ${invoice.businessProfile?.zipCode}</p>
+            <p style="margin: 0;">${invoice.businessProfile?.country}</p>
+            <p style="margin: 0; color: #2563eb;">${invoice.businessProfile?.email}</p>
+            <p style="margin: 0;">${invoice.businessProfile?.phone}</p>
           </div>
         </div>
         <div>
@@ -163,11 +164,10 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Uint8A
     y: y - 100,
     width: 495,
     height: 80,
-    color: 0x2563eb as any, // Blue
+    color: 0x2563eb as any, 
   });
   
-  page.drawText(invoice.businessProfile.name, {
-    x: 60,
+  page.drawText(invoice.businessProfile?.name || '', {
     y: y - 40,
     size: 20,
     font: helveticaBold,
@@ -227,7 +227,7 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Uint8A
     color: 0x111827 as any,
   });
   y -= 15;
-  page.drawText(invoice.businessProfile.name, {
+  page.drawText(invoice.businessProfile?.name || '', {
     x: 50,
     y,
     size: 10,
@@ -235,7 +235,7 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Uint8A
     color: 0x111827 as any,
   });
   y -= 12;
-  page.drawText(`${invoice.businessProfile.address}`, {
+  page.drawText(`${invoice.businessProfile?.address || ''}`, {
     x: 50,
     y,
     size: 9,
@@ -243,7 +243,7 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Uint8A
     color: 0x6b7280 as any,
   });
   y -= 12;
-  page.drawText(`${invoice.businessProfile.city}, ${invoice.businessProfile.state} ${invoice.businessProfile.zipCode}`, {
+  page.drawText(`${invoice.businessProfile?.city || ''}, ${invoice.businessProfile?.state || ''} ${invoice.businessProfile?.zipCode || ''}`, {
     x: 50,
     y,
     size: 9,
@@ -251,7 +251,7 @@ export async function generateInvoicePDFBuffer(invoice: Invoice): Promise<Uint8A
     color: 0x6b7280 as any,
   });
   y -= 12;
-  page.drawText(invoice.businessProfile.email, {
+  page.drawText(invoice.businessProfile?.email || '', {
     x: 50,
     y,
     size: 9,

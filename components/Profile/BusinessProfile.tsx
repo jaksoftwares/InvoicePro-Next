@@ -11,6 +11,7 @@ const BusinessProfileComponent: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState<Partial<BusinessProfile>>({
+    userId: '',
     name: '',
     email: '',
     phone: '',
@@ -62,6 +63,7 @@ const BusinessProfileComponent: React.FC = () => {
     const isNew = !formData.id;
     const profileData: BusinessProfile = {
       id: isNew ? Date.now().toString() : (formData.id as string),
+      userId: formData.userId || '',
       name: formData.name!,
       email: formData.email!,
       phone: formData.phone || '',
@@ -98,6 +100,7 @@ const BusinessProfileComponent: React.FC = () => {
 
   const handleCreateNew = () => {
     setFormData({
+      userId: '',
       name: '',
       email: '',
       phone: '',
@@ -129,6 +132,7 @@ const BusinessProfileComponent: React.FC = () => {
       if (currentProfile?.id === id) {
         setCurrentProfile(null);
         setFormData({
+          userId: '',
           name: '',
           email: '',
           phone: '',
