@@ -2,8 +2,8 @@
 // GET: Fetch user settings (creates default if none exist)
 // PUT: Update user settings
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '../lib/authMiddleware';
-import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { withAuth } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const DEFAULT_SETTINGS = {
   currency: 'USD',

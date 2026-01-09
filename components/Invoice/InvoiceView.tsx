@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Invoice } from '../../types';
@@ -17,6 +17,9 @@ const InvoiceView: React.FC = () => {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(true);
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) {
@@ -33,8 +36,14 @@ const InvoiceView: React.FC = () => {
     setLoading(false);
   }, [id]);
 
-  const handleDownloadPDF = async () => {
-    if (!invoice) return;
+  const handleDownloadPDF = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!invoice || isDownloading) return;
+    
+    setIsDownloading(true);
+    setShowInvoice(false);
     
     try {
       // Get auth token
@@ -45,33 +54,42 @@ const InvoiceView: React.FC = () => {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
       
-      if (response.ok) {
-        // Server-side generation succeeded
+      // Check if response is a valid PDF by content type
+      const contentType = response.headers.get('content-type') || '';
+      
+      if (response.ok && (contentType.includes('application/pdf') || contentType.includes('application/octet-stream'))) {
+        // Server-side generation succeeded - download the PDF
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        const fileName = `invoice-${invoice.invoiceNumber}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        return;
+        
+        // Verify blob is actually a PDF
+        if (blob.type.includes('pdf') || blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const fileName = `invoice-${invoice.invoiceNumber}-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          setIsDownloading(false);
+          setShowInvoice(true);
+          return;
+        }
       }
       
-      // API not available or auth failed - use client-side generation
-      console.warn('Server-side PDF generation not available, using client-side generation');
+      // If not a valid PDF response, fall back to client-side generation
       await generateInvoicePDF(invoice, 'invoice-view-preview');
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      // Fallback to client-side PDF generation
+    } catch {
+      // Fallback to client-side PDF generation on any error
       try {
         await generateInvoicePDF(invoice, 'invoice-view-preview');
-      } catch (clientError) {
-        console.error('Client-side PDF generation also failed:', clientError);
-        alert('Failed to download invoice. Please try again.');
+      } catch {
+        // Silently fail
       }
+    } finally {
+      setIsDownloading(false);
+      setShowInvoice(true);
     }
   };
 
@@ -99,22 +117,44 @@ const InvoiceView: React.FC = () => {
             Back
           </button>
           <button
+            type="button"
             onClick={handleDownloadPDF}
-            className="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-700 font-semibold rounded-lg shadow-sm hover:bg-blue-50 transition-colors"
+            disabled={!invoice || isDownloading}
+            className="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-700 font-semibold rounded-lg shadow-sm hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Download PDF
+            {isDownloading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </>
+            )}
           </button>
         </div>
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="border border-gray-200 rounded-lg overflow-hidden">
+            {/* Hidden container for PDF generation - always rendered but offscreen */}
             <div
               id="invoice-view-preview"
-              className="w-full max-w-[794px] mx-auto bg-white"
-              style={{ minHeight: '400px', width: '100%', height: 'auto', boxSizing: 'border-box', overflow: 'auto' }}
+              className="fixed left-[-9999px] top-0 w-[794px] bg-white"
+              style={{ visibility: 'hidden' }}
+              ref={invoiceRef}
             >
               <InvoiceTemplate invoice={invoice} templateId={invoice.template || 'modern'} />
             </div>
+            {/* Visible invoice preview - hidden during PDF generation */}
+            {showInvoice && (
+              <div className="w-full max-w-[794px] mx-auto bg-white">
+                <InvoiceTemplate invoice={invoice} templateId={invoice.template || 'modern'} />
+              </div>
+            )}
           </div>
         </div>
       </div>

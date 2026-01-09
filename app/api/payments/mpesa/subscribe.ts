@@ -1,8 +1,8 @@
 // api/payments/mpesa/subscribe.ts
 // POST: Initiate M-Pesa STK Push for subscription payment
 import { VercelResponse } from '@vercel/node';
-import { withAuth, AuthenticatedRequest } from '../../lib/authMiddleware.js';
-import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // M-Pesa configuration from environment
 const MPESA_BASE_URL = process.env.MPESA_BASE_URL || 'https://sandbox.safaricom.co.ke';

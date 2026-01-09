@@ -1156,7 +1156,6 @@ export const generateInvoicePDF = async (invoice: Invoice, elementId: string): P
       URL.revokeObjectURL(url);
 
     } catch (error) {
-      console.error('PDF generation error:', error);
       throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       // Ensure container is removed
@@ -1165,7 +1164,6 @@ export const generateInvoicePDF = async (invoice: Invoice, elementId: string): P
       }
     }
   } catch (error) {
-    console.error('PDF generation failed:', error);
     throw error;
   }
 }

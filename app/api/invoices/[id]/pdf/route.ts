@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/authMiddleware';
-import { supabaseAdmin } from '@/app/api/lib/supabaseAdmin';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import type { Invoice } from '@/types';
 
 type InvoiceRow = {
@@ -124,8 +124,6 @@ async function handlePdfRequest(userId: string, id: string): Promise<NextRespons
       return NextResponse.json({ error: 'Missing invoice ID' }, { status: 400 });
     }
 
-    console.log('Fetching invoice:', id, 'userId:', userId);
-
     // Try to fetch from Supabase
     const { data, error } = await supabaseAdmin
       .from('invoices')
@@ -135,25 +133,18 @@ async function handlePdfRequest(userId: string, id: string): Promise<NextRespons
       .single();
 
     if (error || !data) {
-      console.error('Invoice not found in Supabase:', error);
       return NextResponse.json({ 
         error: 'Invoice not found in database. Please ensure the invoice is saved to the database before downloading PDF.',
         notFound: true
       }, { status: 404 });
     }
 
-    console.log('Invoice found in Supabase:', data.id);
-
     const invoice = transformInvoiceToFrontend(data as unknown as InvoiceRow);
-
-    console.log('Generating PDF for invoice:', invoice.id);
 
     // Get the template function from the server-side generator
     const { generateInvoicePDFBuffer } = await import('@/utils/pdfGeneratorServer');
     const pdfBuffer = await generateInvoicePDFBuffer(invoice as unknown as Invoice);
     
-    console.log('PDF generated successfully, size:', pdfBuffer.length);
-
     return new NextResponse(pdfBuffer as unknown as BodyInit, {
       status: 200,
       headers: {
@@ -165,7 +156,6 @@ async function handlePdfRequest(userId: string, id: string): Promise<NextRespons
       },
     });
   } catch (err) {
-    console.error('Error generating PDF:', err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to generate PDF' },
       { status: 500 }

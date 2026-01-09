@@ -1,7 +1,7 @@
 // app/api/plans/route.ts
 // GET: List all subscription plans (public endpoint)
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 type PlanRow = {
   id: string;

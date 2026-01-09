@@ -1,7 +1,7 @@
-// api/payments/mpesa/callback.ts
+// app/api/payments/mpesa/callback.ts
 // POST: Receive M-Pesa STK Push callback from Safaricom
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 interface MpesaCallbackItem {
   Name: string;
@@ -24,19 +24,15 @@ interface MpesaCallbackBody {
   };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const body = req.body as MpesaCallbackBody;
+async function POST(request: NextRequest): Promise<NextResponse> {
+  const body = await request.json() as MpesaCallbackBody;
   console.log('M-Pesa callback received:', JSON.stringify(body, null, 2));
 
   try {
     const { Body } = body;
     
     if (!Body || !Body.stkCallback) {
-      return res.status(400).json({ ResultCode: 1, ResultDesc: 'Invalid callback format' });
+      return NextResponse.json({ ResultCode: 1, ResultDesc: 'Invalid callback format' }, { status: 400 });
     }
 
     const callback = Body.stkCallback;
@@ -49,13 +45,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       .from('payment_events')
       .select('*')
       .eq('mpesa_event_id', checkoutRequestId)
-      .eq('type', 'mpesa.stkpush.initiated')
+      .eq('type', 'mpesa.stskpush.initiated')
       .single();
 
     if (!paymentEvent) {
       console.error('Payment event not found for:', checkoutRequestId);
       // Still acknowledge to M-Pesa
-      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+      return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
     }
 
     const userId = paymentEvent.user_id;
@@ -155,12 +151,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
 
     // Acknowledge receipt to M-Pesa
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+    return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
   } catch (error) {
     console.error('Error processing M-Pesa callback:', error);
     // Still acknowledge to prevent retries
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+    return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
   }
 }
 
@@ -168,3 +164,5 @@ function getMetadataValue(items: MpesaCallbackItem[], name: string): string | nu
   const item = items.find((i) => i.Name === name);
   return item?.Value;
 }
+
+export { POST };

@@ -1,15 +1,11 @@
-// api/subscription/index.ts
+// app/api/subscription/index.ts
 // GET: Fetch current user's subscription
-import { VercelResponse } from '@vercel/node';
-import { withAuth, AuthenticatedRequest } from '../lib/authMiddleware.js';
-import { supabaseAdmin } from '../lib/supabaseAdmin.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-async function handler(req: AuthenticatedRequest, res: VercelResponse) {
+async function getSubscription(req: AuthenticatedRequest): Promise<NextResponse> {
   const userId = req.userId!;
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
 
   const { data, error } = await supabaseAdmin
     .from('subscriptions')
@@ -19,7 +15,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
   if (error || !data) {
     // No subscription found
-    return res.status(200).json({ subscription: null });
+    return NextResponse.json({ subscription: null });
   }
 
   const subscription = {
@@ -44,7 +40,11 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     updatedAt: data.updated_at,
   };
 
-  return res.status(200).json({ subscription });
+  return NextResponse.json({ subscription });
 }
 
-export default withAuth(handler);
+async function GET(request: NextRequest) {
+  return withAuth((req) => getSubscription(req as AuthenticatedRequest))(request);
+}
+
+export { GET };

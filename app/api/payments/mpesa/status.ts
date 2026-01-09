@@ -1,8 +1,8 @@
-// api/payments/mpesa/status.ts
+// app/api/payments/mpesa/status.ts
 // POST: Check the status of an STK Push transaction
-import { VercelResponse } from '@vercel/node';
-import { withAuth, AuthenticatedRequest } from '../../lib/authMiddleware.js';
-import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 const MPESA_BASE_URL = process.env.MPESA_BASE_URL || 'https://sandbox.safaricom.co.ke';
 const MPESA_CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || '';
@@ -10,15 +10,12 @@ const MPESA_CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || '';
 const MPESA_SHORTCODE = process.env.MPESA_SHORTCODE || '174379';
 const MPESA_PASSKEY = process.env.MPESA_PASSKEY || '';
 
-async function handler(req: AuthenticatedRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { checkoutRequestId } = req.body;
+async function status(req: AuthenticatedRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const { checkoutRequestId } = body;
 
   if (!checkoutRequestId) {
-    return res.status(400).json({ error: 'Missing checkoutRequestId' });
+    return NextResponse.json({ error: 'Missing checkoutRequestId' }, { status: 400 });
   }
 
   try {
@@ -30,7 +27,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
       .single();
 
     if (successEvent) {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'completed',
         message: 'Payment successful',
         receiptNumber: successEvent.payload?.mpesaReceiptNumber,
@@ -44,7 +41,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
       .single();
 
     if (failedEvent) {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'failed',
         message: failedEvent.payload?.resultDesc || 'Payment failed',
       });
@@ -54,7 +51,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     const authToken = await getMpesaToken();
     
     if (!authToken) {
-      return res.status(200).json({ status: 'pending', message: 'Waiting for confirmation' });
+      return NextResponse.json({ status: 'pending', message: 'Waiting for confirmation' });
     }
 
     const timestamp = generateTimestamp();
@@ -77,25 +74,25 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
     const queryResult = await queryResponse.json();
 
     if (queryResult.ResultCode === '0') {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'completed',
         message: 'Payment successful',
       });
     } else if (queryResult.ResultCode) {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'failed',
         message: queryResult.ResultDesc || 'Payment failed',
       });
     }
 
-    return res.status(200).json({
+    return NextResponse.json({
       status: 'pending',
       message: 'Payment is being processed',
     });
 
   } catch (error) {
     console.error('Error checking payment status:', error);
-    return res.status(200).json({ status: 'pending', message: 'Unable to check status' });
+    return NextResponse.json({ status: 'pending', message: 'Unable to check status' });
   }
 }
 
@@ -137,4 +134,8 @@ function generatePassword(timestamp: string): string {
   return Buffer.from(data).toString('base64');
 }
 
-export default withAuth(handler);
+async function POST(request: NextRequest) {
+  return withAuth((req) => status(req as AuthenticatedRequest))(request);
+}
+
+export { POST };

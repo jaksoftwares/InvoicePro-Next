@@ -1,13 +1,12 @@
-
-// api/payments/mpesa/index.ts
+// app/api/payments/mpesa/index.ts
 // Handles all M-Pesa related payment actions.
 // POST ?action=subscribe: Initiate M-Pesa STK Push for subscription payment
 // POST ?action=callback: Receive M-Pesa STK Push callback from Safaricom
 // POST ?action=status: Check the status of an STK Push transaction
 
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { withAuth, AuthenticatedRequest } from '../../lib/authMiddleware.js';
-import { supabaseAdmin } from '../../lib/supabaseAdmin.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 // M-Pesa configuration from environment
 const MPESA_BASE_URL = process.env.MPESA_BASE_URL || 'https://sandbox.safaricom.co.ke';
@@ -40,41 +39,20 @@ interface MpesaCallbackBody {
   };
 }
 
-async function handler(req: VercelRequest, res: VercelResponse) {
-  const { action } = req.query;
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  switch (action) {
-    case 'subscribe':
-      // withAuth is applied before this handler for this case
-      return await subscribe(req as AuthenticatedRequest, res);
-    case 'callback':
-      // This is an unprotected endpoint for Safaricom to call
-      return await callback(req, res);
-    case 'status':
-       // withAuth is applied before this handler for this case
-      return await status(req as AuthenticatedRequest, res);
-    default:
-      return res.status(400).json({ error: 'Invalid action' });
-  }
-}
-
-async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
+async function subscribe(req: AuthenticatedRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const { planId, phoneNumber } = body;
   const userId = req.userId!;
-  const { planId, phoneNumber } = req.body;
 
   if (!planId || !phoneNumber) {
-    return res.status(400).json({ error: 'Missing planId or phoneNumber' });
+    return NextResponse.json({ error: 'Missing planId or phoneNumber' }, { status: 400 });
   }
 
   const cleanPhone = phoneNumber.replace(/\D/g, '');
   if (!cleanPhone.match(/^254\d{9}$/)) {
-    return res.status(400).json({ 
+    return NextResponse.json({ 
       error: 'Invalid phone number format. Use format: 2547XXXXXXXX' 
-    });
+    }, { status: 400 });
   }
 
   const { data: plan, error: planError } = await supabaseAdmin
@@ -84,7 +62,7 @@ async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
     .single();
 
   if (planError || !plan) {
-    return res.status(404).json({ error: 'Plan not found' });
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   }
 
   const amount = Math.ceil(plan.price_cents / 100);
@@ -92,7 +70,7 @@ async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
   try {
     const authToken = await getMpesaToken();
     if (!authToken) {
-      return res.status(500).json({ error: 'Failed to authenticate with M-Pesa' });
+      return NextResponse.json({ error: 'Failed to authenticate with M-Pesa' }, { status: 500 });
     }
 
     const timestamp = generateTimestamp();
@@ -123,10 +101,10 @@ async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
 
     if (stkResult.ResponseCode !== '0') {
       console.error('STK Push failed:', stkResult);
-      return res.status(400).json({ 
+      return NextResponse.json({ 
         error: 'Failed to initiate payment',
         details: stkResult.ResponseDescription || stkResult.errorMessage,
-      });
+      }, { status: 400 });
     }
 
     await supabaseAdmin.from('payment_events').insert({
@@ -142,7 +120,7 @@ async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
       },
     });
 
-    return res.status(200).json({
+    return NextResponse.json({
       status: 'pending',
       message: 'STK Push initiated. Please complete the payment on your phone.',
       checkoutRequestId: stkResult.CheckoutRequestID,
@@ -150,19 +128,19 @@ async function subscribe(req: AuthenticatedRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('M-Pesa STK Push error:', error);
-    return res.status(500).json({ error: 'Payment initiation failed' });
+    return NextResponse.json({ error: 'Payment initiation failed' }, { status: 500 });
   }
 }
 
-async function callback(req: VercelRequest, res: VercelResponse): Promise<VercelResponse> {
-  const body = req.body as MpesaCallbackBody;
+async function callback(req: NextRequest): Promise<NextResponse> {
+  const body = await req.json() as MpesaCallbackBody;
   console.log('M-Pesa callback received:', JSON.stringify(body, null, 2));
 
   try {
     const { Body } = body;
     
     if (!Body || !Body.stkCallback) {
-      return res.status(400).json({ ResultCode: 1, ResultDesc: 'Invalid callback format' });
+      return NextResponse.json({ ResultCode: 1, ResultDesc: 'Invalid callback format' }, { status: 400 });
     }
 
     const callback = Body.stkCallback;
@@ -179,7 +157,7 @@ async function callback(req: VercelRequest, res: VercelResponse): Promise<Vercel
 
     if (!paymentEvent) {
       console.error('Payment event not found for:', checkoutRequestId);
-      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+      return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
     }
 
     const userId = paymentEvent.user_id;
@@ -242,19 +220,20 @@ async function callback(req: VercelRequest, res: VercelResponse): Promise<Vercel
       console.log(`Payment failed for user ${userId}: ${resultDesc}`);
     }
 
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+    return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
   } catch (error) {
     console.error('Error processing M-Pesa callback:', error);
-    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
+    return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' });
   }
 }
 
-async function status(req: AuthenticatedRequest, res: VercelResponse) {
-  const { checkoutRequestId } = req.body;
+async function status(req: AuthenticatedRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const { checkoutRequestId } = body;
 
   if (!checkoutRequestId) {
-    return res.status(400).json({ error: 'Missing checkoutRequestId' });
+    return NextResponse.json({ error: 'Missing checkoutRequestId' }, { status: 400 });
   }
 
   try {
@@ -265,7 +244,7 @@ async function status(req: AuthenticatedRequest, res: VercelResponse) {
       .single();
 
     if (successEvent) {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'completed',
         message: 'Payment successful',
         receiptNumber: successEvent.payload?.mpesaReceiptNumber,
@@ -279,7 +258,7 @@ async function status(req: AuthenticatedRequest, res: VercelResponse) {
       .single();
 
     if (failedEvent) {
-      return res.status(200).json({
+      return NextResponse.json({
         status: 'failed',
         message: failedEvent.payload?.resultDesc || 'Payment failed',
       });
@@ -287,7 +266,7 @@ async function status(req: AuthenticatedRequest, res: VercelResponse) {
 
     const authToken = await getMpesaToken();
     if (!authToken) {
-      return res.status(200).json({ status: 'pending', message: 'Waiting for confirmation' });
+      return NextResponse.json({ status: 'pending', message: 'Waiting for confirmation' });
     }
 
     const timestamp = generateTimestamp();
@@ -310,21 +289,19 @@ async function status(req: AuthenticatedRequest, res: VercelResponse) {
     const queryResult = await queryResponse.json();
 
     if (queryResult.ResultCode === '0') {
-      return res.status(200).json({ status: 'completed', message: 'Payment successful' });
+      return NextResponse.json({ status: 'completed', message: 'Payment successful' });
     } else if (queryResult.ResultCode) {
-      return res.status(200).json({ status: 'failed', message: queryResult.ResultDesc || 'Payment failed' });
+      return NextResponse.json({ status: 'failed', message: queryResult.ResultDesc || 'Payment failed' });
     }
 
-    return res.status(200).json({ status: 'pending', message: 'Payment is being processed' });
+    return NextResponse.json({ status: 'pending', message: 'Payment is being processed' });
 
   } catch (error) {
     console.error('Error checking payment status:', error);
-    return res.status(200).json({ status: 'pending', message: 'Unable to check status' });
+    return NextResponse.json({ status: 'pending', message: 'Unable to check status' });
   }
 }
 
-
-// Helper functions
 async function getMpesaToken(): Promise<string | null> {
   try {
     const auth = Buffer.from(`${MPESA_CONSUMER_KEY}:${MPESA_CONSUMER_SECRET}`).toString('base64');
@@ -362,15 +339,25 @@ function getMetadataValue(items: MpesaCallbackItem[], name: string): string | nu
   return item?.Value;
 }
 
-// The main export determines which paths are auth-protected
-export default async function (req: VercelRequest, res: VercelResponse) {
-  const { action } = req.query;
+async function POST(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action');
 
   if (action === 'callback') {
-    // Unprotected path
-    return handler(req, res);
+    // Unprotected endpoint for Safaricom to call
+    return callback(request);
   }
-  
+
   // Protected paths
-  return withAuth(handler)(req, res);
+  return withAuth((req) => {
+    if (action === 'subscribe') {
+      return subscribe(req as AuthenticatedRequest);
+    }
+    if (action === 'status') {
+      return status(req as AuthenticatedRequest);
+    }
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  })(request);
 }
+
+export { POST };

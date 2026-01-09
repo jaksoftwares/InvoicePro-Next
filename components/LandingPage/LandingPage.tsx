@@ -97,14 +97,14 @@ const LandingPage: React.FC = () => {
                  href="/create"
                  className="inline-flex items-center px-8 py-4 bg-blue-700 text-white text-lg sm:text-xl font-bold rounded-full shadow-xl hover:bg-blue-800 transition-colors group focus:outline-none focus:ring-4 focus:ring-blue-300"
                >
-              Get Started Free
+              Log in toGet Started Free
               <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </Link>
                <Link
                  href="/dashboard"
                  className="inline-flex items-center px-8 py-4 bg-indigo-600 text-white text-lg sm:text-xl font-bold rounded-full shadow-xl hover:bg-indigo-700 transition-colors group focus:outline-none focus:ring-4 focus:ring-indigo-300"
                >
-              Go to Dashboard
+              Access your workspace
               <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

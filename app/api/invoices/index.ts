@@ -7,8 +7,8 @@
 // DELETE /api/invoices?id={id} -> delete an invoice
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '../lib/authMiddleware';
-import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { withAuth } from '@/lib/authMiddleware';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 interface InvoiceItemInput {
   description: string;

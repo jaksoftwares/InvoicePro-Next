@@ -1,23 +1,20 @@
-// api/media/sign-upload.ts
+// app/api/media/sign-upload.ts
 // POST: Generate Cloudinary upload signature for secure uploads
-import { VercelResponse } from '@vercel/node';
-import { withAuth, AuthenticatedRequest } from '../lib/authMiddleware.js';
+import { NextRequest, NextResponse } from 'next/server';
+import { withAuth, AuthenticatedRequest } from '@/lib/authMiddleware';
 import crypto from 'crypto';
 
 const CLOUDINARY_API_SECRET = process.env.CLOUDINARY_API_SECRET || '';
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY || '';
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || '';
 
-async function handler(req: AuthenticatedRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { folder = 'invoicepro', resourceType = 'image' } = req.body;
+async function handler(req: AuthenticatedRequest): Promise<NextResponse> {
+  const body = await req.json().catch(() => ({}));
+  const { folder = 'invoicepro', resourceType = 'image' } = body;
   const userId = req.userId!;
 
   if (!CLOUDINARY_API_SECRET || !CLOUDINARY_API_KEY || !CLOUDINARY_CLOUD_NAME) {
-    return res.status(500).json({ error: 'Cloudinary not configured' });
+    return NextResponse.json({ error: 'Cloudinary not configured' }, { status: 500 });
   }
 
   try {
@@ -41,7 +38,7 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
       .update(sortedParams + CLOUDINARY_API_SECRET)
       .digest('hex');
 
-    return res.status(200).json({
+    return NextResponse.json({
       cloudName: CLOUDINARY_CLOUD_NAME,
       apiKey: CLOUDINARY_API_KEY,
       timestamp,
@@ -52,8 +49,12 @@ async function handler(req: AuthenticatedRequest, res: VercelResponse) {
 
   } catch (error) {
     console.error('Error generating upload signature:', error);
-    return res.status(500).json({ error: 'Failed to generate upload signature' });
+    return NextResponse.json({ error: 'Failed to generate upload signature' }, { status: 500 });
   }
 }
 
-export default withAuth(handler);
+async function POST(request: NextRequest) {
+  return withAuth((req) => handler(req as AuthenticatedRequest))(request);
+}
+
+export { POST };
