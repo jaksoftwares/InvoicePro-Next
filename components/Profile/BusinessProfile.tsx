@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Save, Plus, Edit, Trash2, Building2, Mail, Phone, MapPin, Globe, Hash } from 'lucide-react';
 import { BusinessProfile } from '../../types';
+import { remoteStorageUtils } from '../../utils/remoteStorage';
 import { storageUtils } from '../../utils/storage';
+import { getUploadSignature, saveMediaAsset } from '../../services/api';
 import SEO from '../SEO';
 
 const BusinessProfileComponent: React.FC = () => {
@@ -24,32 +26,75 @@ const BusinessProfileComponent: React.FC = () => {
     taxNumber: '',
     logo: '',
   });
+  const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
-    const loadProfiles = () => {
-      const savedProfiles = storageUtils.getBusinessProfiles();
-      const savedCurrentProfile = storageUtils.getCurrentProfile();
-      
-      setProfiles(savedProfiles);
-      setCurrentProfile(savedCurrentProfile);
-      
-      if (savedCurrentProfile) {
-        setFormData(savedCurrentProfile);
+    const loadProfiles = async () => {
+      setLoading(true);
+      const timeout = new Promise<BusinessProfile[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
+      try {
+        const savedProfiles = await Promise.race([remoteStorageUtils.getBusinessProfiles(), timeout]);
+        const savedCurrentProfile = remoteStorageUtils.getCurrentProfile();
+
+        setProfiles(savedProfiles);
+        setCurrentProfile(savedCurrentProfile);
+
+        if (savedCurrentProfile) {
+          setFormData(savedCurrentProfile);
+        }
+      } catch (error) {
+        console.error('Failed to load profiles:', error);
+        // Fallback to local storage
+        const localProfiles = storageUtils.getBusinessProfiles();
+        const localCurrent = storageUtils.getCurrentProfile();
+        setProfiles(localProfiles);
+        setCurrentProfile(localCurrent);
+        if (localCurrent) setFormData(localCurrent);
+      } finally {
+        setLoading(false);
       }
     };
-
     loadProfiles();
   }, []);
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const logoDataUrl = e.target?.result as string;
-        setFormData(prev => ({ ...prev, logo: logoDataUrl }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      // Get upload signature
+      const signature = await getUploadSignature('business-profiles');
+      // Prepare form data for upload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('api_key', signature.apiKey);
+      uploadFormData.append('timestamp', signature.timestamp.toString());
+      uploadFormData.append('signature', signature.signature);
+      uploadFormData.append('folder', signature.folder);
+      uploadFormData.append('resource_type', signature.resourceType);
+      // Upload to Cloudinary
+      const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${signature.cloudName}/image/upload`, {
+        method: 'POST',
+        body: uploadFormData,
+      });
+      const uploadResult = await uploadResponse.json();
+      if (!uploadResponse.ok) throw new Error(uploadResult.error?.message || 'Upload failed');
+      // Save media asset in database
+      const media = await saveMediaAsset({
+        publicId: uploadResult.public_id,
+        url: uploadResult.secure_url,
+        format: uploadResult.format,
+        resourceType: 'image',
+        bytes: uploadResult.bytes,
+        width: uploadResult.width,
+        height: uploadResult.height,
+      });
+      // Update form data with the uploaded logo URL
+      setFormData(prev => ({ ...prev, logoUrl: media.url, logo: media.url }));
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      alert('Failed to upload logo. Please try again.');
     }
   };
 
@@ -124,33 +169,38 @@ const BusinessProfileComponent: React.FC = () => {
     setIsCreating(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this profile?')) {
-      storageUtils.deleteBusinessProfile(id);
-      setProfiles(prev => prev.filter(p => p.id !== id));
-      
-      if (currentProfile?.id === id) {
-        setCurrentProfile(null);
-        setFormData({
-          userId: '',
-          name: '',
-          email: '',
-          phone: '',
-          address: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          country: '',
-          website: '',
-          taxNumber: '',
-          logo: '',
-        });
+      try {
+        await remoteStorageUtils.deleteBusinessProfile(id);
+        setProfiles(prev => prev.filter(p => p.id !== id));
+         
+        if (currentProfile?.id === id) {
+          setCurrentProfile(null);
+          setFormData({
+            userId: '',
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: '',
+            website: '',
+            taxNumber: '',
+            logo: '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to delete profile:', error);
+        alert('Failed to delete profile. Please try again.');
       }
     }
   };
 
   const handleSetCurrent = (profile: BusinessProfile) => {
-    storageUtils.setCurrentProfile(profile);
+    remoteStorageUtils.setCurrentProfile(profile);
     setCurrentProfile(profile);
     setFormData(profile);
   };
@@ -174,7 +224,12 @@ const BusinessProfileComponent: React.FC = () => {
           'description': 'Business profile management for invoicing.'
         }}
       />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {loading ? (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+          <div className="text-lg">Loading business profiles...</div>
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* Enhanced Header */}
           <div className="bg-white rounded-xl shadow-lg p-6">
@@ -508,7 +563,8 @@ const BusinessProfileComponent: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

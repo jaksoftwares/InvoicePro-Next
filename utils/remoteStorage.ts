@@ -249,7 +249,7 @@ export const remoteStorageUtils = {
         const remoteProfiles = await api.getBusinessProfiles();
 
         for (const localProfile of localProfiles) {
-          const exists = remoteProfiles.find(rp => rp.id === localProfile.id);
+          const exists = remoteProfiles.find(rp => rp.name === localProfile.name && rp.email === localProfile.email);
           if (!exists) {
             try {
               await api.createBusinessProfile(localProfile);
@@ -267,7 +267,7 @@ export const remoteStorageUtils = {
         const remoteInvoices = await api.getInvoices();
 
         for (const localInvoice of localInvoices) {
-          const exists = remoteInvoices.find(ri => ri.id === localInvoice.id);
+          const exists = remoteInvoices.find(ri => ri.invoiceNumber === localInvoice.invoiceNumber);
           if (!exists && localInvoice.businessProfile?.id) {
             try {
               await api.createInvoice({

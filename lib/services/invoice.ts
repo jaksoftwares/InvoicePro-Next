@@ -208,8 +208,8 @@ export async function createInvoice(userId: string, body: Record<string, unknown
       total: body.total || 0,
       notes: body.notes || null,
       terms: body.terms || null,
-      due_date: body.dueDate,
-      issue_date: body.issueDate,
+      due_date: body.dueDate && typeof body.dueDate === 'string' ? body.dueDate.split('T')[0] : null,
+      issue_date: body.issueDate && typeof body.issueDate === 'string' ? body.issueDate.split('T')[0] : null,
       status: body.status || 'draft',
       template: body.template || 'modern',
       currency: body.currency || 'USD',
@@ -218,6 +218,16 @@ export async function createInvoice(userId: string, body: Record<string, unknown
     .single();
 
   if (error) throw error;
+
+  // Log the creation
+  await supabaseAdmin
+    .from('invoice_history')
+    .insert({
+      invoice_id: data.id,
+      user_id: userId,
+      action: 'created',
+      new_data: body,
+    });
 
   const items = body.items as Array<{ description: string; quantity?: number; rate?: number; amount?: number }> | undefined;
   if (items?.length) {
@@ -255,6 +265,9 @@ export async function updateInvoice(userId: string, id: string, body: Record<str
     }
   });
 
+  if (updateData.due_date && typeof updateData.due_date === 'string') updateData.due_date = updateData.due_date.split('T')[0];
+  if (updateData.issue_date && typeof updateData.issue_date === 'string') updateData.issue_date = updateData.issue_date.split('T')[0];
+
   const { error } = await supabaseAdmin
     .from('invoices')
     .update(updateData)
@@ -262,6 +275,16 @@ export async function updateInvoice(userId: string, id: string, body: Record<str
     .eq('user_id', userId);
 
   if (error) throw error;
+
+  // Log the update
+  await supabaseAdmin
+    .from('invoice_history')
+    .insert({
+      invoice_id: id,
+      user_id: userId,
+      action: 'updated',
+      new_data: body,
+    });
 
   if (body.items !== undefined) {
     await supabaseAdmin.from('invoice_items').delete().eq('invoice_id', id);
@@ -283,6 +306,15 @@ export async function updateInvoice(userId: string, id: string, body: Record<str
 }
 
 export async function deleteInvoice(userId: string, id: string) {
+  // Log the deletion
+  await supabaseAdmin
+    .from('invoice_history')
+    .insert({
+      invoice_id: id,
+      user_id: userId,
+      action: 'deleted',
+    });
+
   await supabaseAdmin.from('invoice_items').delete().eq('invoice_id', id);
   const { error } = await supabaseAdmin.from('invoices').delete().eq('id', id).eq('user_id', userId);
   if (error) throw error;
