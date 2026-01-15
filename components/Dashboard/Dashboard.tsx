@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, LogOut, FileText, DollarSign, Users, TrendingUp, Eye, Edit, Trash2, Search, Filter, Calendar, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Settings, User } from 'lucide-react';
@@ -12,12 +12,36 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { useAuth } from '../../context/AuthContext';
 import SubscriptionDashboard from '../Subscription/SubscriptionDashboard';
 
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+  color: string;
+  subtitle?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, subtitle }) => (
+  <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
+    <div className="flex items-center">
+      <div className={`flex-shrink-0 p-3 rounded-lg ${color}`}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+      <div className="ml-5 w-0 flex-1">
+        <dl>
+          <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
+          <dd className="text-2xl font-bold text-gray-900">{value}</dd>
+          {subtitle && <dd className="text-xs text-gray-500">{subtitle}</dd>}
+        </dl>
+      </div>
+    </div>
+  </div>
+);
+
 const Dashboard: React.FC = () => {
   const { currency } = useCurrency();
   const { user, logout } = useAuth();
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -115,7 +139,7 @@ const Dashboard: React.FC = () => {
     loadUserProfile();
   }, []);
 
-  useEffect(() => {
+  const filteredInvoices = useMemo(() => {
     let filtered = invoices;
 
     // Filter by search term
@@ -132,7 +156,7 @@ const Dashboard: React.FC = () => {
       filtered = filtered.filter(invoice => invoice.status === statusFilter);
     }
 
-    setFilteredInvoices(filtered);
+    return filtered;
   }, [invoices, searchTerm, statusFilter]);
 
   const handleDeleteInvoice = (id: string) => {
@@ -142,31 +166,6 @@ const Dashboard: React.FC = () => {
       setInvoices(updatedInvoices);
     }
   };
-
-  interface StatCardProps {
-    title: string;
-    value: string | number;
-    icon: React.ElementType;
-    color: string;
-    subtitle?: string;
-  }
-
-  const StatCard: React.FC<StatCardProps> = ({ title, value, icon: Icon, color, subtitle }) => (
-    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow">
-      <div className="flex items-center">
-        <div className={`flex-shrink-0 p-3 rounded-lg ${color}`}>
-          <Icon className="h-6 w-6 text-white" />
-        </div>
-        <div className="ml-5 w-0 flex-1">
-          <dl>
-            <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-            <dd className="text-2xl font-bold text-gray-900">{value}</dd>
-            {subtitle && <dd className="text-xs text-gray-500">{subtitle}</dd>}
-          </dl>
-        </div>
-      </div>
-    </div>
-  );
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'N/A';
