@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Save, DollarSign, Globe, Calendar, Palette, Download, Trash2, AlertTriangle, Mail, Key } from 'lucide-react';
+import { Save, DollarSign, Globe, Calendar, Palette, Download, Trash2, AlertTriangle, Mail, Key, CreditCard, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { storageUtils } from '../../utils/storage';
 import { updateEmailConfiguration, validateEmailConfiguration } from '../../utils/emailService';
 import SEO from '../SEO';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useAuth } from '../../context/AuthContext';
+import type { Subscription, UsageCounter, Plan } from '../../types';
+import SubscriptionDashboard from '../Subscription/SubscriptionDashboard';
 
 const Settings: React.FC = () => {
   const { setCurrency } = useCurrency();
@@ -26,19 +28,55 @@ const Settings: React.FC = () => {
     publicKey: '',
   });
 
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [usageCounters, setUsageCounters] = useState<UsageCounter[]>([]);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [showSubscription, setShowSubscription] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
-    const savedSettings = storageUtils.getSettings();
-    setSettings(prev => ({ ...prev, ...savedSettings }));
-    setCurrency(savedSettings.currency || 'USD');
+    const loadData = async () => {
+      const savedSettings = storageUtils.getSettings();
+      setSettings(prev => ({ ...prev, ...savedSettings }));
+      setCurrency(savedSettings.currency || 'USD');
 
-    // Load email settings if they exist
-    const savedEmailSettings = localStorage.getItem('email_settings');
-    if (savedEmailSettings) {
-      setEmailSettings(JSON.parse(savedEmailSettings));
-    }
+      // Load email settings if they exist
+      const savedEmailSettings = localStorage.getItem('email_settings');
+      if (savedEmailSettings) {
+        setEmailSettings(JSON.parse(savedEmailSettings));
+      }
+
+      // Load subscription data
+      try {
+        const subscriptionResponse = await fetch('/api/subscription', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}`,
+          },
+        });
+        if (subscriptionResponse.ok) {
+          const subscriptionData = await subscriptionResponse.json();
+          setSubscription(subscriptionData.subscription);
+          setUsageCounters(subscriptionData.usageCounters || []);
+        }
+      } catch (error) {
+        console.error('Failed to load subscription:', error);
+      }
+
+      // Load plans
+      try {
+        const plansResponse = await fetch('/api/plans');
+        if (plansResponse.ok) {
+          const plansData = await plansResponse.json();
+          setPlans(plansData.plans || []);
+        }
+      } catch (error) {
+        console.error('Failed to load plans:', error);
+      }
+    };
+
+    loadData();
   }, []);
 
   const handleSave = () => {
@@ -222,6 +260,182 @@ const Settings: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Subscription Management */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+            <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
+            Subscription & Billing
+          </h3>
+
+          {subscription ? (
+            <div className="space-y-6">
+              {/* Current Subscription Status */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    {subscription.status === 'active' && <CheckCircle className="h-6 w-6 text-green-500" />}
+                    {subscription.status === 'suspended' && <XCircle className="h-6 w-6 text-red-500" />}
+                    {subscription.status === 'past_due' && <AlertTriangle className="h-6 w-6 text-orange-500" />}
+                    {(subscription.status === 'pending' || subscription.status === 'pending_payment') && <Clock className="h-6 w-6 text-yellow-500" />}
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{subscription.plan?.name || 'Unknown Plan'}</h4>
+                      <p className="text-sm text-gray-600 capitalize">{subscription.billingInterval}ly billing</p>
+                    </div>
+                  </div>
+                  <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
+                    subscription.status === 'active' ? 'bg-green-100 text-green-800' :
+                    subscription.status === 'suspended' ? 'bg-red-100 text-red-800' :
+                    subscription.status === 'past_due' ? 'bg-orange-100 text-orange-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {subscription.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+
+                {subscription.nextBillingAt && (
+                  <p className="text-sm text-gray-600">
+                    Next billing date: {new Date(subscription.nextBillingAt).toLocaleDateString('en-KE')}
+                  </p>
+                )}
+              </div>
+
+              {/* Usage Counters */}
+              {usageCounters.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-3">Current Usage</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {usageCounters.map((counter) => {
+                      const percentage = counter.maxAllowed ? (counter.used / counter.maxAllowed) * 100 : 0;
+                      const isUnlimited = counter.maxAllowed === null;
+
+                      return (
+                        <div key={counter.resource} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium text-gray-900 capitalize">
+                              {counter.resource.replace('_', ' ')}
+                            </span>
+                            <span className="text-sm text-gray-500">
+                              {counter.used} {isUnlimited ? 'used' : `of ${counter.maxAllowed}`}
+                            </span>
+                          </div>
+                          {!isUnlimited && (
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  percentage > 90 ? 'bg-red-500' :
+                                  percentage > 70 ? 'bg-yellow-500' : 'bg-green-500'
+                                }`}
+                                style={{ width: `${Math.min(percentage, 100)}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Subscription Actions */}
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowSubscription(!showSubscription)}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  {showSubscription ? 'Hide Details' : 'Manage Subscription'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h4 className="text-lg font-medium text-gray-900 mb-2">No Active Subscription</h4>
+              <p className="text-gray-500 mb-4">You don't have an active subscription plan.</p>
+              <button
+                onClick={() => window.location.href = '/signup'}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Choose a Plan
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Full Subscription Dashboard */}
+        {showSubscription && subscription && (
+          <SubscriptionDashboard
+            subscription={subscription}
+            usageCounters={usageCounters}
+            onPlanChange={(planId) => {
+              // Handle plan change
+              console.log('Plan change requested:', planId);
+            }}
+            onCancel={() => {
+              // Handle cancellation
+              console.log('Cancellation requested');
+            }}
+          />
+        )}
+
+        {/* Available Plans */}
+        {plans.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">Available Plans</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {plans.map((plan) => {
+                const isCurrentPlan = subscription?.planId === plan.id;
+                const isFree = plan.priceCents === 0;
+
+                return (
+                  <div
+                    key={plan.id}
+                    className={`relative rounded-xl border-2 p-4 transition-all ${
+                      isCurrentPlan
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    {isCurrentPlan && (
+                      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                        Current
+                      </div>
+                    )}
+
+                    <div className="text-center mb-3">
+                      <h4 className="font-semibold text-gray-900">{plan.name}</h4>
+                      <p className="text-sm text-gray-500">{plan.description}</p>
+                      <div className="text-lg font-bold text-gray-900 mt-2">
+                        {isFree ? 'Free' : `KSh ${plan.priceCents / 100}/${plan.interval}`}
+                      </div>
+                    </div>
+
+                    <ul className="text-xs text-gray-600 space-y-1 mb-3">
+                      <li>Invoices: {plan.maxInvoices === null ? 'Unlimited' : plan.maxInvoices}</li>
+                      <li>Business Profiles: {plan.maxBusinessProfiles === null ? 'Unlimited' : plan.maxBusinessProfiles}</li>
+                      <li>Support: {plan.supportLevel}</li>
+                      {plan.prioritySupport && <li>Priority Support</li>}
+                      {plan.customBranding && <li>Custom Branding</li>}
+                    </ul>
+
+                    {!isCurrentPlan && (
+                      <button
+                        onClick={() => {
+                          // Handle plan upgrade/downgrade
+                          console.log('Plan selection:', plan.id);
+                        }}
+                        className="w-full py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        {isFree ? 'Select Plan' : 'Upgrade'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Currency & Financial */}
         <div className="bg-white rounded-xl shadow-lg p-6">

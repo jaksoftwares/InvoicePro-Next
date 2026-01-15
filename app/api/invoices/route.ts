@@ -1,7 +1,7 @@
 // app/api/invoices/route.ts
 // GET: List invoices, POST: Create invoice
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/authMiddleware';
+import { withAuth, withSubscriptionOrLimits } from '@/lib/authMiddleware';
 import { listInvoices, createInvoice } from '@/lib/services/invoice';
 
 export async function GET(request: NextRequest) {
@@ -18,13 +18,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAuth(async (req, userId) => {
+  return withSubscriptionOrLimits(async (req, userId) => {
     try {
       const body = await req.json().catch(() => ({}));
       const invoice = await createInvoice(userId, body);
       return NextResponse.json({ invoice }, { status: 201 });
-    } catch {
-      return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create invoice';
+      return NextResponse.json({ error: message }, { status: 500 });
     }
   })(request);
 }

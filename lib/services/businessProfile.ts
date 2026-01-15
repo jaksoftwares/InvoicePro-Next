@@ -66,6 +66,13 @@ export async function getProfile(userId: string, id: string) {
 }
 
 export async function createProfile(userId: string, body: Record<string, unknown>) {
+  // Check usage limit before creating business profile
+  const { checkUsageLimit, incrementUsageCounter, logAuditEvent } = await import('./subscription');
+  const limitCheck = await checkUsageLimit(userId, 'business_profiles');
+  if (!limitCheck.allowed) {
+    throw new Error('Business profile creation limit reached for your current plan');
+  }
+
   const { data, error } = await supabaseAdmin
     .from('business_profiles')
     .insert({
@@ -86,6 +93,16 @@ export async function createProfile(userId: string, body: Record<string, unknown
     .single();
 
   if (error) throw error;
+
+  // Increment usage counter
+  await incrementUsageCounter(userId, 'business_profiles');
+
+  // Log audit event
+  await logAuditEvent(userId, 'business_profile.created', 'business_profile', data.id, {
+    name: body.name,
+    email: body.email,
+  });
+
   return toBusinessProfile(data as BusinessProfileRow);
 }
 

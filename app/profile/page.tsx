@@ -1,15 +1,15 @@
-"use client";
 import React from 'react';
+import UserProfile from '../../components/Profile/UserProfile';
 import ProtectedRoute from '../../components/Auth/ProtectedRoute';
-import Layout from '../../components/Layout/Layout';
-import Profile from '../../components/Auth/Profile';
 
-export default function ProfilePage() {
+const ProfilePage: React.FC = () => {
   return (
     <ProtectedRoute>
-      <Layout>
-        <Profile />
-      </Layout>
+      <div className="min-h-screen bg-gray-50">
+        <UserProfile />
+      </div>
     </ProtectedRoute>
   );
-}
+};
+
+export default ProfilePage;

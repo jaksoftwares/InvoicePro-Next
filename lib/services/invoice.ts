@@ -186,6 +186,13 @@ export async function getInvoice(userId: string, id: string) {
 }
 
 export async function createInvoice(userId: string, body: Record<string, unknown>) {
+  // Check usage limit before creating invoice
+  const { checkUsageLimit, incrementUsageCounter, logAuditEvent } = await import('./subscription');
+  const limitCheck = await checkUsageLimit(userId, 'invoices');
+  if (!limitCheck.allowed) {
+    throw new Error('Invoice creation limit reached for your current plan');
+  }
+
   const { data, error } = await supabaseAdmin
     .from('invoices')
     .insert({
@@ -219,6 +226,9 @@ export async function createInvoice(userId: string, body: Record<string, unknown
 
   if (error) throw error;
 
+  // Increment usage counter
+  await incrementUsageCounter(userId, 'invoices');
+
   // Log the creation
   await supabaseAdmin
     .from('invoice_history')
@@ -228,6 +238,13 @@ export async function createInvoice(userId: string, body: Record<string, unknown
       action: 'created',
       new_data: body,
     });
+
+  // Log audit event
+  await logAuditEvent(userId, 'invoice.created', 'invoice', data.id, {
+    invoiceNumber: body.invoiceNumber,
+    clientName: body.clientName,
+    total: body.total,
+  });
 
   const items = body.items as Array<{ description: string; quantity?: number; rate?: number; amount?: number }> | undefined;
   if (items?.length) {

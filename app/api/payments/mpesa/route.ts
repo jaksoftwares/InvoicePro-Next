@@ -21,6 +21,15 @@ async function handleSubscribe(req: NextRequest): Promise<NextResponse> {
   const { data: plan, error: planError } = await supabaseAdmin.from('plans').select('*').eq('id', planId).single();
   if (planError || !plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
 
+  // Create subscription with pending_payment status
+  const { createSubscription } = await import('@/lib/services/subscription');
+  try {
+    await createSubscription(userId, planId, cleanPhone);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create subscription';
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+
   const amount = Math.ceil(plan.price_cents / 100);
   const authToken = await getMpesaToken();
   if (!authToken) return NextResponse.json({ error: 'M-Pesa auth failed' }, { status: 500 });
@@ -59,7 +68,14 @@ async function handleCallback(req: NextRequest): Promise<NextResponse> {
   if (ResultCode === 0) {
     const metadata = extractCallbackMetadata(CallbackMetadata?.Item || []);
     await recordPaymentSuccess(userId, CheckoutRequestID, { ...metadata, planId: paymentEvent.payload?.planId });
-    await activateSubscription(userId, paymentEvent.payload?.planId as string, metadata.mpesaReceiptNumber as string);
+    await activateSubscription(
+      userId,
+      CheckoutRequestID,
+      paymentEvent.payload?.planId as string,
+      metadata.mpesaReceiptNumber as string,
+      paymentEvent.payload?.amount as number,
+      paymentEvent.payload?.phoneNumber as string
+    );
   } else {
     await recordPaymentFailure(userId, CheckoutRequestID, { resultCode: ResultCode, resultDesc: ResultDesc, planId: paymentEvent.payload?.planId });
   }

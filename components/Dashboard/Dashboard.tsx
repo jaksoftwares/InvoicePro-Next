@@ -2,14 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, LogOut, FileText, DollarSign, Users, TrendingUp, Eye, Edit, Trash2, Search, Filter, Calendar } from 'lucide-react';
-import { Invoice } from '../../types';
+import { Plus, LogOut, FileText, DollarSign, Users, TrendingUp, Eye, Edit, Trash2, Search, Filter, Calendar, CreditCard, CheckCircle, AlertTriangle, XCircle, Clock, Settings, User } from 'lucide-react';
+import { Invoice, Subscription, UsageCounter } from '../../types';
 import { storageUtils } from '../../utils/storage';
 import { formatCurrency, getStatusColor, getStatusIcon } from '../../utils/invoiceHelpers';
 import { format } from 'date-fns';
 import SEO from '../SEO';
 import { useCurrency } from '../../context/CurrencyContext';
-import { useAuth } from '../../context/AuthContext'; 
+import { useAuth } from '../../context/AuthContext';
+import SubscriptionDashboard from '../Subscription/SubscriptionDashboard';
 
 const Dashboard: React.FC = () => {
   const { currency } = useCurrency();
@@ -19,6 +20,9 @@ const Dashboard: React.FC = () => {
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [usageCounters, setUsageCounters] = useState<UsageCounter[]>([]);
+  const [showSubscription, setShowSubscription] = useState(false);
   const [stats, setStats] = useState({
     totalInvoices: 0,
     totalRevenue: 0,
@@ -27,7 +31,9 @@ const Dashboard: React.FC = () => {
     overdueInvoices: 0,
     draftInvoices: 0,
   });
-    const handleLogout = async () => {
+  const [userProfile, setUserProfile] = useState<{ name?: string }>({});
+
+  const handleLogout = async () => {
     await logout();
     router.push('/login');
   };
@@ -36,7 +42,7 @@ const Dashboard: React.FC = () => {
     const loadInvoices = () => {
       const savedInvoices = storageUtils.getInvoices();
       setInvoices(savedInvoices);
-      
+
       // Calculate stats
       const totalInvoices = savedInvoices.length;
       const totalRevenue = savedInvoices
@@ -46,7 +52,7 @@ const Dashboard: React.FC = () => {
       const pendingInvoices = savedInvoices.filter(inv => inv.status === 'sent').length;
       const overdueInvoices = savedInvoices.filter(inv => inv.status === 'overdue').length;
       const draftInvoices = savedInvoices.filter(inv => inv.status === 'draft').length;
-      
+
       setStats({
         totalInvoices,
         totalRevenue,
@@ -57,7 +63,56 @@ const Dashboard: React.FC = () => {
       });
     };
 
+    const loadSubscription = async () => {
+      try {
+        const token = localStorage.getItem('supabase.auth.token');
+        console.log('Loading subscription with token:', token ? 'present' : 'missing');
+
+        const response = await fetch('/api/subscription', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        console.log('Subscription API response status:', response.status);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Subscription data loaded:', data);
+          setSubscription(data.subscription);
+          setUsageCounters(data.usageCounters || []);
+        } else {
+          const errorText = await response.text();
+          console.error('Subscription API error:', errorText);
+        }
+      } catch (error) {
+        console.error('Failed to load subscription:', error);
+      }
+    };
+
+    const loadUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('supabase.auth.token');
+        const response = await fetch('/api/profile', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserProfile(data.profile);
+        } else {
+          console.error('Failed to load user profile from API');
+        }
+      } catch (error) {
+        console.error('Failed to load user profile:', error);
+      }
+    };
+
     loadInvoices();
+    loadSubscription();
+    loadUserProfile();
   }, []);
 
   useEffect(() => {
@@ -113,6 +168,15 @@ const Dashboard: React.FC = () => {
     </div>
   );
 
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-KE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <SEO
@@ -141,13 +205,21 @@ const Dashboard: React.FC = () => {
           {/* Enhanced Header */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-              <div>
+              <div className="flex-1">
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
                 <p className="text-gray-600">
-                  {`Welcome back${user?.email ? ", " + user.email : ''}! Here's an overview of your invoice activity`}
+                  {`Welcome back${userProfile.name ? ", " + userProfile.name : user?.email ? ", " + user.email : ''}! Here's an overview of your invoice activity`}
                 </p>
               </div>
               <div className="mt-6 lg:mt-0 flex items-center gap-4">
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  title="View Profile"
+                >
+                  <User className="h-4 w-4 mr-2" />
+                  Profile
+                </Link>
                 <Link
                   href="/create"
                   className="inline-flex items-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
@@ -165,6 +237,119 @@ const Dashboard: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Subscription Status Banner - Always Visible */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <CreditCard className="h-8 w-8 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Subscription Status</h2>
+                  {subscription ? (
+                    <div className="flex items-center space-x-4 mt-1">
+                      <div className="flex items-center space-x-2">
+                        {subscription.status === 'active' && <CheckCircle className="h-5 w-5 text-green-500" />}
+                        {subscription.status === 'suspended' && <XCircle className="h-5 w-5 text-red-500" />}
+                        {subscription.status === 'past_due' && <AlertTriangle className="h-5 w-5 text-orange-500" />}
+                        {(subscription.status === 'pending' || subscription.status === 'pending_payment') && <Clock className="h-5 w-5 text-yellow-500" />}
+                        <span className="font-medium text-gray-900">
+                          {subscription.plan?.name || 'Unknown Plan'}
+                        </span>
+                        <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
+                          subscription.status === 'active' ? 'bg-green-100 text-green-800' :
+                          subscription.status === 'suspended' ? 'bg-red-100 text-red-800' :
+                          subscription.status === 'past_due' ? 'bg-orange-100 text-orange-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {subscription.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                      {subscription.nextBillingAt && (
+                        <div className="text-sm text-gray-600">
+                          Next billing: {formatDate(subscription.nextBillingAt)}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-600 mt-1">Loading subscription information...</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  console.log('Manage Subscription button clicked, current state:', showSubscription);
+                  setShowSubscription(!showSubscription);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                {showSubscription ? 'Hide' : 'Manage'} Subscription
+              </button>
+            </div>
+
+            {/* Usage Summary - Always Visible */}
+            {subscription && usageCounters.length > 0 && (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {usageCounters.map((counter) => {
+                  const percentage = counter.maxAllowed ? (counter.used / counter.maxAllowed) * 100 : 0;
+                  const isUnlimited = counter.maxAllowed === null;
+
+                  return (
+                    <div key={counter.resource} className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium text-gray-900 capitalize">
+                          {counter.resource.replace('_', ' ')}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          {counter.used} {isUnlimited ? 'used' : `of ${counter.maxAllowed}`}
+                        </span>
+                      </div>
+                      {!isUnlimited && (
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              percentage > 90 ? 'bg-red-500' :
+                              percentage > 70 ? 'bg-yellow-500' : 'bg-green-500'
+                            }`}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Status-specific alerts */}
+            {subscription?.status === 'past_due' && (
+              <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <AlertTriangle className="h-5 w-5 text-orange-500 mr-2" />
+                  <div>
+                    <h4 className="font-medium text-orange-900">Payment Overdue</h4>
+                    <p className="text-sm text-orange-800">
+                      Your subscription payment is overdue. Please update your payment method to avoid service interruption.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {subscription?.status === 'suspended' && (
+              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <XCircle className="h-5 w-5 text-red-500 mr-2" />
+                  <div>
+                    <h4 className="font-medium text-red-900">Account Suspended</h4>
+                    <p className="text-sm text-red-800">
+                      Your account has been suspended due to payment issues. Some features are currently unavailable.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Enhanced Stats Cards */}
@@ -217,6 +402,22 @@ const Dashboard: React.FC = () => {
               subtitle="Not yet sent"
             />
           </div>
+
+          {/* Subscription Dashboard */}
+          {showSubscription && subscription && (
+            <SubscriptionDashboard
+              subscription={subscription}
+              usageCounters={usageCounters}
+              onPlanChange={(planId) => {
+                // Handle plan change
+                console.log('Plan change requested:', planId);
+              }}
+              onCancel={() => {
+                // Handle cancellation
+                console.log('Cancellation requested');
+              }}
+            />
+          )}
 
           {/* Enhanced Invoices Table */}
           <div className="bg-white rounded-xl shadow-lg">

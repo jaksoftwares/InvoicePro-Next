@@ -6,11 +6,18 @@ import { ArrowRight, Sparkles, ShieldCheck, Send, Check } from 'lucide-react';
 interface Plan {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   priceCents: number;
   currency: string;
-  interval: string;
+  interval: 'month' | 'year';
   features: Record<string, unknown>;
+  isActive: boolean;
+  maxInvoices?: number | null;
+  maxBusinessProfiles?: number | null;
+  supportLevel: string;
+  prioritySupport: boolean;
+  customBranding: boolean;
+  createdAt: string;
 }
 
 const formatPrice = (cents: number, currency: string = 'USD') => {
@@ -110,7 +117,7 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
         <div className="mt-12 w-full flex justify-center">
-          <img src="/sample-template.png" alt="Invoice Generator Preview" className="rounded-2xl shadow-2xl w-full max-w-xl border border-blue-100" />
+          <img src="/sample-template.png" alt="Invoice Generator Preview" className="rounded-2xl shadow-2xl max-w-xl  border border-blue-100 object-contain" />
         </div>
       </main>
 
@@ -176,41 +183,62 @@ const LandingPage: React.FC = () => {
                         {plan.description}
                       </p>
                       <div className="flex items-baseline justify-center">
-                        <span className="text-4xl font-extrabold">
+                        <span className="text-3xl font-extrabold">
                           {formatPrice(plan.priceCents, plan.currency)}
                         </span>
                       </div>
                     </div>
 
                     <ul className="space-y-3 mb-6 flex-1">
-                      {plan.features && Object.entries(plan.features).map(([key, value]) => {
-                        // Format feature key for display
-                        const featureLabels: Record<string, string> = {
-                          maxInvoices: 'Max Invoices',
-                          maxProfiles: 'Business Profiles',
-                          emailSupport: 'Email Support',
-                          prioritySupport: 'Priority Support',
-                          customBranding: 'Custom Branding',
-                        };
-                        const label = featureLabels[key] || key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                      {/* Invoice Limit */}
+                      <li className="flex items-center text-sm">
+                        <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
+                          isPopular ? 'text-green-300' : 'text-green-500'
+                        }`} />
+                        <span>
+                          <strong>Invoices:</strong> {plan.maxInvoices === null ? 'Unlimited' : plan.maxInvoices}
+                        </span>
+                      </li>
 
-                        return (
-                          <li key={key} className="flex items-center text-sm">
-                            <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
-                              isPopular ? 'text-green-300' : 'text-green-500'
-                            }`} />
-                            <span>
-                              <strong>{label}:</strong> {
-                                typeof value === 'boolean'
-                                  ? (value ? 'Yes' : 'No')
-                                  : value === -1
-                                    ? 'Unlimited'
-                                    : String(value)
-                              }
-                            </span>
-                          </li>
-                        );
-                      })}
+                      {/* Business Profiles Limit */}
+                      <li className="flex items-center text-sm">
+                        <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
+                          isPopular ? 'text-green-300' : 'text-green-500'
+                        }`} />
+                        <span>
+                          <strong>Business Profiles:</strong> {plan.maxBusinessProfiles === null ? 'Unlimited' : plan.maxBusinessProfiles}
+                        </span>
+                      </li>
+
+                      {/* Support Level */}
+                      <li className="flex items-center text-sm">
+                        <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
+                          isPopular ? 'text-green-300' : 'text-green-500'
+                        }`} />
+                        <span>
+                          <strong>Support:</strong> {plan.supportLevel}
+                        </span>
+                      </li>
+
+                      {/* Priority Support */}
+                      {plan.prioritySupport && (
+                        <li className="flex items-center text-sm">
+                          <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
+                            isPopular ? 'text-green-300' : 'text-green-500'
+                          }`} />
+                          <span>Priority Support</span>
+                        </li>
+                      )}
+
+                      {/* Custom Branding */}
+                      {plan.customBranding && (
+                        <li className="flex items-center text-sm">
+                          <Check className={`h-5 w-5 mr-2 flex-shrink-0 ${
+                            isPopular ? 'text-green-300' : 'text-green-500'
+                          }`} />
+                          <span>Custom Branding</span>
+                        </li>
+                      )}
                     </ul>
 
                     <Link

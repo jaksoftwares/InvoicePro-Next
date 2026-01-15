@@ -1,7 +1,7 @@
 // app/api/business-profiles/route.ts
 // GET: List profiles, POST: Create profile
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/authMiddleware';
+import { withAuth, withSubscriptionOrLimits } from '@/lib/authMiddleware';
 import { listProfiles, createProfile } from '@/lib/services/businessProfile';
 
 export async function GET(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  return withAuth(async (req, userId) => {
+  return withSubscriptionOrLimits(async (req, userId) => {
     try {
       const body = await req.json().catch(() => ({}));
       if (!body.name || !body.email) {
@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
       }
       const profile = await createProfile(userId, body);
       return NextResponse.json({ profile }, { status: 201 });
-    } catch {
-      return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create profile';
+      return NextResponse.json({ error: message }, { status: 500 });
     }
   })(request);
 }

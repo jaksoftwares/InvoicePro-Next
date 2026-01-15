@@ -74,35 +74,65 @@ export async function findPaymentEvent(checkoutRequestId: string) {
   return data;
 }
 
-export async function activateSubscription(userId: string, planId: string, mpesaReceiptNumber: string) {
-  const now = new Date();
-  const { data: plan } = await supabaseAdmin.from('plans').select('interval').eq('id', planId).single();
-  const periodEnd = new Date(now);
-  if (plan?.interval === 'year') periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-  else periodEnd.setMonth(periodEnd.getMonth() + 1);
+export async function activateSubscription(userId: string, checkoutRequestId: string, planId: string, mpesaReceiptNumber: string, amount: number, phoneNumber: string) {
+  const { activateSubscription: activate, getUserSubscription, logAuditEvent } = await import('./subscription');
 
-  const { data: existing } = await supabaseAdmin.from('subscriptions').select('id').eq('user_id', userId).single();
+  // Check if this is a renewal payment (checkoutRequestId starts with 'renewal_')
+  const isRenewal = checkoutRequestId.startsWith('renewal_');
 
-  if (existing) {
-    await supabaseAdmin.from('subscriptions').update({
-      plan_id: planId,
-      status: 'active',
-      mpesa_receipt_number: mpesaReceiptNumber,
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      canceled_at: null,
-      cancel_at: null,
-      updated_at: now.toISOString(),
-    }).eq('user_id', userId);
-  } else {
-    await supabaseAdmin.from('subscriptions').insert({
-      user_id: userId,
-      plan_id: planId,
-      status: 'active',
-      mpesa_receipt_number: mpesaReceiptNumber,
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
+  // Insert into mpesa_payments table
+  await supabaseAdmin.from('mpesa_payments').insert({
+    user_id: userId,
+    plan_id: planId,
+    phone_number: phoneNumber,
+    amount: amount,
+    currency: 'KES',
+    checkout_request_id: checkoutRequestId,
+    mpesa_receipt_number: mpesaReceiptNumber,
+    status: 'completed',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
+  if (isRenewal) {
+    // Handle renewal: extend the billing cycle
+    const subscription = await getUserSubscription(userId);
+    if (!subscription) throw new Error('Subscription not found for renewal');
+
+    const now = new Date();
+    const nextBillingDate = new Date(subscription.nextBillingAt || now);
+
+    // Extend the billing cycle
+    if (subscription.billingInterval === 'year') {
+      nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+    } else {
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+    }
+
+    await supabaseAdmin
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        current_period_end: nextBillingDate.toISOString(),
+        next_billing_at: nextBillingDate.toISOString(),
+        last_payment_at: now.toISOString(),
+        payment_status: 'paid',
+        suspended_at: null,
+        updated_at: now.toISOString(),
+      })
+      .eq('user_id', userId);
+
+    await logAuditEvent(userId, 'billing.renewal_completed', 'subscription', undefined, {
+      planId,
+      amount,
+      mpesaReceiptNumber,
+      nextBillingAt: nextBillingDate.toISOString(),
     });
+
+    return await getUserSubscription(userId);
+  } else {
+    // Handle initial activation
+    return await activate(userId, planId, mpesaReceiptNumber);
   }
 }
 

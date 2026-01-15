@@ -115,6 +115,11 @@ export interface Plan {
   interval: 'month' | 'year';
   features: Record<string, unknown>;
   isActive: boolean;
+  maxInvoices?: number | null;
+  maxBusinessProfiles?: number | null;
+  supportLevel: string;
+  prioritySupport: boolean;
+  customBranding: boolean;
   createdAt: Date;
 }
 
@@ -123,13 +128,61 @@ export interface Subscription {
   userId: string;
   planId: string;
   plan?: Plan;
-  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'past_due' | 'canceled';
+  status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'pending' | 'pending_payment' | 'suspended';
   currentPeriodStart?: Date;
   currentPeriodEnd?: Date;
+  nextBillingAt?: Date;
   cancelAt?: Date;
   canceledAt?: Date;
+  lastPaymentAt?: Date;
+  paymentStatus?: string;
+  billingInterval: string;
+  usageSnapshot?: Record<string, unknown>;
+  trialEndsAt?: Date;
   mpesaReceiptNumber?: string;
   mpesaPhoneNumber?: string;
+  suspendedAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface AuditEvent {
+  id: string;
+  userId: string;
+  action: string;
+  resource: string;
+  resourceId?: string;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt: Date;
+}
+
+export interface UsageCounter {
+  id: string;
+  userId: string;
+  subscriptionId: string;
+  resource: string;
+  used: number;
+  maxAllowed?: number | null;
+  resetAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MpesaPayment {
+  id: string;
+  userId: string;
+  subscriptionId?: string;
+  planId: string;
+  phoneNumber: string;
+  amount: number;
+  currency: string;
+  checkoutRequestId: string;
+  merchantRequestId: string;
+  mpesaReceiptNumber?: string;
+  status: string;
+  rawCallback?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
